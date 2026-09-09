@@ -1,8 +1,13 @@
 # MyHealth
 
-> **Live app:** _not deployed yet._ Deploying takes about five minutes and costs
-> nothing — see [Deploying it](#deploying-it--the-free-question-answered). Put the
-> URL here once it is up.
+> ### 👉 [my-health-rust-beta.vercel.app](https://my-health-rust-beta.vercel.app)
+>
+> That is the live app. Open it on your phone and add it to your Home Screen.
+>
+> ---
+>
+> Want your own copy? Deploying takes about five minutes and costs nothing — see
+> [Deploying it](#deploying-it--the-free-question-answered).
 >
 > **If you own this repository**, import it at
 > **[vercel.com/new](https://vercel.com/new)** and pick `MyHealth`. That links the
