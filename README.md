@@ -1,5 +1,11 @@
 # MyHealth
 
+> **Live app:** _not deployed yet._ Once you deploy, put the URL here — see
+> [Deploying it](#deploying-it--the-free-question-answered) below, it takes about
+> five minutes and costs nothing.
+>
+> [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRishabh261998%2FMyHealth&project-name=myhealth&repository-name=myhealth&env=DATABASE_URL,AUTH_SECRET,CRON_SECRET&envDescription=DATABASE_URL%20is%20your%20Postgres%20connection%20string.%20AUTH_SECRET%20and%20CRON_SECRET%20are%20any%20two%20long%20random%20strings.&envLink=https%3A%2F%2Fgithub.com%2FRishabh261998%2FMyHealth%23step-by-step)
+
 One place for the gym and the diet: your weekly split, every set you lift, what
 you eat, your body weight, progress photos, and phone reminders that nudge you
 when it matters.
@@ -80,29 +86,34 @@ the API key and every other feature still works.
 
 **1. Create the database**
 
-Sign up at [neon.tech](https://neon.tech), create a project, and copy the
-**pooled** connection string (it has `-pooler` in the hostname).
+Two ways, both free:
+
+- **Easiest** — deploy first (step 2), then in your Vercel project go to
+  **Storage → Create Database → Neon**. Vercel provisions it and sets
+  `DATABASE_URL` for you, then redeploy.
+- **Manual** — sign up at [neon.tech](https://neon.tech), create a project, and
+  copy the **pooled** connection string (it has `-pooler` in the hostname).
 
 **2. Deploy to Vercel**
 
-Import this repository at [vercel.com/new](https://vercel.com/new). Before the
-first deploy, add these environment variables:
+Click the Deploy button at the top of this file, or import the repository at
+[vercel.com/new](https://vercel.com/new). Set these environment variables:
 
 | Variable | Value |
 |---|---|
-| `DATABASE_URL` | the Neon pooled connection string |
+| `DATABASE_URL` | the Neon pooled connection string (skip if using Vercel Storage) |
 | `AUTH_SECRET` | a long random string — `openssl rand -base64 48` |
 | `CRON_SECRET` | another long random string |
 | `ALLOW_SIGNUP` | `true` for now |
 
-**3. Create the tables**
+Vercel gives you a public `https://<project>.vercel.app` URL — that is the link
+to open on your phone, and the one to paste at the top of this README.
 
-From a clone of this repo, with `DATABASE_URL` in a local `.env`:
+**3. The tables create themselves**
 
-```bash
-npm install
-npm run db:push
-```
+Nothing to do. `npm run build` runs the migrations in `drizzle/` before building,
+so the first deploy sets up all 14 tables for you. It is idempotent — later
+deploys just check and move on.
 
 **4. Turn on notifications**
 
@@ -149,7 +160,7 @@ screen just says the feature is off.
 ```bash
 cp .env.example .env      # fill in DATABASE_URL and AUTH_SECRET
 npm install
-npm run db:push           # create the tables
+npm run db:migrate        # create the tables (also runs automatically on build)
 npm run dev               # http://localhost:3000
 ```
 
@@ -157,7 +168,9 @@ Handy scripts:
 
 | Command | What it does |
 |---|---|
-| `npm run db:push` | Sync the schema to your database |
+| `npm run db:migrate` | Apply pending migrations |
+| `npm run db:generate` | Generate a new migration after editing `src/db/schema.ts` |
+| `npm run db:push` | Push the schema straight to a dev database, no migration file |
 | `npm run db:studio` | Browse your data in Drizzle Studio |
 | `npm run gen:vapid` | Generate web-push keys |
 | `npm run gen:icons` | Regenerate the PWA icons |
