@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b0f14;
+  --surface: #131a22;
+  --surface-2: #1b242e;
+  --line: #26313d;
+  --ink: #e8eef5;
+  --muted: #8ba0b5;
+  --brand: #3ba3f2;
+  --brand-soft: #17334d;
+  --good: #35c88a;
+  --warn: #f2b13b;
+  --bad: #f2603b;
+
+  /* Chart tokens — validated categorical slots 1-2 for the dark surface. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --grid: #202b36;
+  --axis-ink: #8ba0b5;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface-2: #eef2f7;
+    --line: #dde4ec;
+    --ink: #121a23;
+    --muted: #5d7086;
+    --brand: #1877d2;
+    --brand-soft: #e2eefc;
+    --good: #1c9c68;
+    --warn: #b57708;
+    --bad: #cf4322;
+
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --grid: #e6ebf1;
+    --axis-ink: #5d7086;
+    color-scheme: light;
+  }
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Keep content clear of the fixed bottom nav and the phone's home indicator. */
+.pb-safe {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+.nav-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface p-4;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white;
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-surface2 text-ink;
+  }
+  .btn-danger {
+    @apply btn border border-line bg-surface2 text-[var(--bad)];
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted focus:border-brand;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-surface2 px-2.5 py-1 text-xs font-medium text-muted;
+  }
+  .h-section {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted;
+  }
+}
+
+/* Number inputs: no spinners, they get in the way on mobile. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}

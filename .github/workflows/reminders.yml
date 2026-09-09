@@ -1,0 +1,27 @@
+# Free reminder scheduler.
+#
+# GitHub Actions runs this on a schedule and pokes your deployment, which then
+# sends any push notifications that are due. Set two repository secrets under
+# Settings -> Secrets and variables -> Actions:
+#   APP_URL      e.g. https://myhealth-yourname.vercel.app
+#   CRON_SECRET  the same value as the CRON_SECRET env var on your deployment
+name: Send reminders
+
+on:
+  schedule:
+    # Every 15 minutes. GitHub queues cron jobs, so expect a few minutes of drift.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reminder run
+        run: |
+          code=$(curl -sS -o /tmp/out.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/reminders")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          test "$code" = "200"

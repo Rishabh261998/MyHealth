@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline — MyHealth</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        background: #0b0f14;
+        color: #e8eef5;
+        font: 16px/1.5 system-ui, sans-serif;
+        text-align: center;
+        padding: 2rem;
+      }
+      p { color: #8ba0b5; max-width: 22rem; }
+      button {
+        margin-top: 1rem;
+        padding: 0.7rem 1.4rem;
+        border: 0;
+        border-radius: 0.8rem;
+        background: #3ba3f2;
+        color: #fff;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>You are offline</h1>
+      <p>MyHealth needs a connection to load your log. Your data is safe on the server.</p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>

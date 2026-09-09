@@ -1,0 +1,21 @@
+{
+  "name": "MyHealth — gym, diet and progress",
+  "short_name": "MyHealth",
+  "description": "Your gym plan, lifting log, diet, body weight, progress photos and reminders in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Start workout", "url": "/workout" },
+    { "name": "Log a meal", "url": "/nutrition" },
+    { "name": "Log weight", "url": "/body" }
+  ]
+}
