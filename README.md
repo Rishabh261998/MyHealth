@@ -1,8 +1,16 @@
 # MyHealth
 
-> **Live app:** _not deployed yet._ Once you deploy, put the URL here — see
-> [Deploying it](#deploying-it--the-free-question-answered) below, it takes about
-> five minutes and costs nothing.
+> **Live app:** _not deployed yet._ Deploying takes about five minutes and costs
+> nothing — see [Deploying it](#deploying-it--the-free-question-answered). Put the
+> URL here once it is up.
+>
+> **If you own this repository**, import it at
+> **[vercel.com/new](https://vercel.com/new)** and pick `MyHealth`. That links the
+> deployment to this repo, so every push to `main` ships automatically.
+>
+> The button below is for *other people* — it copies the repo into a new one of
+> their own. Do not use it on your own repository or you will end up with a
+> duplicate that your commits never reach.
 >
 > [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRishabh261998%2FMyHealth&project-name=myhealth&repository-name=myhealth&env=DATABASE_URL,AUTH_SECRET,CRON_SECRET&envDescription=DATABASE_URL%20is%20your%20Postgres%20connection%20string.%20AUTH_SECRET%20and%20CRON_SECRET%20are%20any%20two%20long%20random%20strings.&envLink=https%3A%2F%2Fgithub.com%2FRishabh261998%2FMyHealth%23step-by-step)
 
@@ -96,8 +104,8 @@ Two ways, both free:
 
 **2. Deploy to Vercel**
 
-Click the Deploy button at the top of this file, or import the repository at
-[vercel.com/new](https://vercel.com/new). Set these environment variables:
+Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import
+`MyHealth`. Set these environment variables before deploying:
 
 | Variable | Value |
 |---|---|
