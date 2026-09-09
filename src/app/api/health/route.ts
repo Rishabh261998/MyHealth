@@ -12,27 +12,46 @@ export const dynamic = "force-dynamic";
  * Reports only whether each secret is *present* — never its value.
  */
 export async function GET() {
+  // "missing" and "empty" look the same to most checks, but they mean very
+  // different things: empty means the variable was added and its value did not
+  // save — a much easier mistake to make than forgetting it entirely.
+  const describe = (name: string) => {
+    const raw = process.env[name];
+    if (raw === undefined) return "missing";
+    if (raw.trim() === "") return "present but EMPTY — the value did not save";
+    return `set (${raw.trim().length} characters)`;
+  };
+
+  const isUsable = (name: string) => (process.env[name] ?? "").trim() !== "";
+
   const env = {
-    DATABASE_URL: Boolean(process.env.DATABASE_URL),
-    AUTH_SECRET: Boolean(process.env.AUTH_SECRET),
-    AUTH_SECRET_long_enough: (process.env.AUTH_SECRET ?? "").length >= 16,
-    CRON_SECRET: Boolean(process.env.CRON_SECRET),
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY: Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
-    VAPID_PRIVATE_KEY: Boolean(process.env.VAPID_PRIVATE_KEY),
-    ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY),
-    ALLOW_SIGNUP: process.env.ALLOW_SIGNUP ?? "(unset — defaults to true)",
+    DATABASE_URL: describe("DATABASE_URL"),
+    AUTH_SECRET: describe("AUTH_SECRET"),
+    CRON_SECRET: describe("CRON_SECRET"),
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: describe("NEXT_PUBLIC_VAPID_PUBLIC_KEY"),
+    VAPID_PRIVATE_KEY: describe("VAPID_PRIVATE_KEY"),
+    ANTHROPIC_API_KEY: describe("ANTHROPIC_API_KEY"),
+    ALLOW_SIGNUP: describe("ALLOW_SIGNUP"),
   };
 
   const problems: string[] = [];
-  if (!env.DATABASE_URL) problems.push("DATABASE_URL is not set.");
-  if (!env.AUTH_SECRET) problems.push("AUTH_SECRET is not set.");
-  else if (!env.AUTH_SECRET_long_enough) {
-    problems.push("AUTH_SECRET is shorter than 16 characters.");
+  for (const name of ["DATABASE_URL", "AUTH_SECRET"]) {
+    if (process.env[name] === undefined) {
+      problems.push(`${name} is missing. Add it in Vercel → Settings → Environment Variables, tick Production, then redeploy.`);
+    } else if (!isUsable(name)) {
+      problems.push(`${name} exists but its value is empty. Re-enter the value, save, then redeploy.`);
+    }
   }
+  if (isUsable("AUTH_SECRET") && process.env.AUTH_SECRET!.trim().length < 16) {
+    problems.push("AUTH_SECRET is shorter than 16 characters — use a long random string.");
+  }
+  problems.push(
+    "Reminder: environment variables only reach a deployment that was built after they were saved. Always redeploy after changing them.",
+  );
 
   let database: Record<string, unknown> = { reachable: false };
 
-  if (env.DATABASE_URL) {
+  if (isUsable("DATABASE_URL")) {
     try {
       const rows = await db.execute<{ table_name: string }>(sql`
         select table_name
@@ -74,16 +93,16 @@ export async function GET() {
 
   return NextResponse.json(
     {
-      status: problems.length === 0 ? "ok" : "needs attention",
+      status: problems.length <= 1 ? "ok" : "needs attention",
       checkedAt: new Date().toISOString(),
       problems,
       env,
       database,
       pushNotifications:
-        env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY
+        isUsable("NEXT_PUBLIC_VAPID_PUBLIC_KEY") && isUsable("VAPID_PRIVATE_KEY")
           ? "configured"
           : "off — add the VAPID keys to enable reminders",
-      aiPhotoAnalysis: env.ANTHROPIC_API_KEY ? "configured" : "off — optional",
+      aiPhotoAnalysis: isUsable("ANTHROPIC_API_KEY") ? "configured" : "off — optional",
     },
     { status: 200 },
   );
