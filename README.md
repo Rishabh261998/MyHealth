@@ -112,12 +112,18 @@ Two ways, both free:
 Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import
 `MyHealth`. Set these environment variables before deploying:
 
-| Variable | Value |
+**`DATABASE_URL` is the only variable you have to set**, and creating the
+database from Vercel's Storage tab fills it in for you — so in practice there is
+nothing to type at all.
+
+Everything else is optional:
+
+| Variable | When you need it |
 |---|---|
-| `DATABASE_URL` | the Neon pooled connection string (skip if using Vercel Storage) |
-| `AUTH_SECRET` | a long random string — `openssl rand -base64 48` |
-| `CRON_SECRET` | another long random string |
-| `ALLOW_SIGNUP` | `true` for now |
+| `AUTH_SECRET` | Never, unless you want to pin it. Left unset, the app generates a random session secret on first run and keeps it in the database. |
+| `CRON_SECRET` | Only to enable scheduled reminders (step 5). |
+| `ALLOW_SIGNUP` | Only to close registration, once your account exists. The first account is always allowed regardless, so you cannot lock yourself out. |
+| `ANTHROPIC_API_KEY` | Only for AI progress-photo analysis. |
 
 Vercel gives you a public `https://<project>.vercel.app` URL — that is the link
 to open on your phone, and the one to paste at the top of this README.

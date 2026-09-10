@@ -12,6 +12,19 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
+/* --------------------------------------------------------- app settings */
+
+/**
+ * Small key/value store for things the server generates for itself — notably
+ * the session-signing secret, so a deployment does not need AUTH_SECRET set by
+ * hand to be secure.
+ */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 /* ------------------------------------------------------------------ users */
 
 export const users = pgTable("users", {

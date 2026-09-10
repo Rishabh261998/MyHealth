@@ -6,7 +6,7 @@ import { randomBytes, scrypt as _scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { users, type User } from "@/db/schema";
+import { appSettings, users, type User } from "@/db/schema";
 
 const scrypt = promisify(_scrypt) as (
   pw: string | Buffer,
@@ -16,12 +16,53 @@ const scrypt = promisify(_scrypt) as (
 
 const COOKIE = "myhealth_session";
 
-function secret() {
-  const s = process.env.AUTH_SECRET;
-  if (!s || s.length < 16) {
-    throw new Error("AUTH_SECRET is missing or too short (needs 16+ characters).");
+const SESSION_SECRET_KEY = "session_secret";
+
+const globalForSecret = globalThis as unknown as { __authSecret?: Uint8Array };
+
+/**
+ * The key used to sign session cookies.
+ *
+ * AUTH_SECRET wins when it is set. Otherwise the server generates a random
+ * secret once and keeps it in the database, so a deployment is secure without
+ * anyone having to paste a random string into a settings screen. Either way the
+ * value is stable across deploys, so sessions survive them.
+ */
+async function secret(): Promise<Uint8Array> {
+  if (globalForSecret.__authSecret) return globalForSecret.__authSecret;
+
+  const fromEnv = (process.env.AUTH_SECRET ?? "").trim();
+  if (fromEnv.length >= 16) {
+    const key = new TextEncoder().encode(fromEnv);
+    globalForSecret.__authSecret = key;
+    return key;
   }
-  return new TextEncoder().encode(s);
+  if (fromEnv.length > 0) {
+    throw new Error("AUTH_SECRET is set but shorter than 16 characters.");
+  }
+
+  const generated = randomBytes(48).toString("base64url");
+
+  // Two cold starts can race here, so let the database decide the winner:
+  // insert only if absent, then read back whatever is actually stored.
+  await db
+    .insert(appSettings)
+    .values({ key: SESSION_SECRET_KEY, value: generated })
+    .onConflictDoNothing({ target: appSettings.key });
+
+  const [row] = await db
+    .select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, SESSION_SECRET_KEY))
+    .limit(1);
+
+  if (!row) {
+    throw new Error("Could not establish a session secret in the database.");
+  }
+
+  const key = new TextEncoder().encode(row.value);
+  globalForSecret.__authSecret = key;
+  return key;
 }
 
 export async function hashPassword(password: string) {
@@ -44,7 +85,7 @@ export async function createSession(userId: number) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("90d")
-    .sign(secret());
+    .sign(await secret());
 
   const jar = await cookies();
   jar.set(COOKIE, token, {
@@ -66,7 +107,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret());
+    const { payload } = await jwtVerify(token, await secret());
     const uid = Number(payload.uid);
     if (!uid) return null;
     const rows = await db.select().from(users).where(eq(users.id, uid)).limit(1);
