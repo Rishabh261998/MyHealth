@@ -58,14 +58,63 @@ function unconfigured(): Db {
     get(_target, prop) {
       if (typeof prop === "symbol" || PROBE_KEYS.has(prop)) return undefined;
       throw new Error(
-        "DATABASE_URL is not set, so this page cannot read the database. " +
-          "Open /api/health for a full check of this deployment.",
+        "No Postgres connection string was found, so this page cannot read the " +
+          "database. Open /api/health for a full check of this deployment.",
       );
     },
   });
 }
 
-const connectionString = process.env.DATABASE_URL;
+/**
+ * Find the Postgres connection string, whatever the host decided to call it.
+ *
+ * Vercel's storage integrations name this differently depending on provider and
+ * on whether a custom prefix was set (DATABASE_URL, POSTGRES_URL,
+ * STORAGE_DATABASE_URL, ...), so match on shape rather than on one exact name.
+ * Pooled URLs are preferred — serverless functions should not hold direct
+ * connections.
+ */
+export function resolveDatabaseUrl(): { url: string; source: string } | null {
+  const usable = (name: string) => {
+    const value = (process.env[name] ?? "").trim();
+    return /^postgres(ql)?:\/\//i.test(value) ? value : null;
+  };
+
+  // Exact names first, most specific and most pooled first.
+  for (const name of [
+    "DATABASE_URL",
+    "POSTGRES_URL",
+    "POSTGRES_PRISMA_URL",
+    "DATABASE_POSTGRES_URL",
+  ]) {
+    const url = usable(name);
+    if (url) return { url, source: name };
+  }
+
+  // Then anything shaped like a prefixed connection string, skipping the
+  // direct-connection variants the integrations also publish.
+  const candidates = Object.keys(process.env)
+    .filter((name) => /(^|_)(DATABASE|POSTGRES)_URL$/i.test(name))
+    .filter((name) => !/UNPOOLED|NON_POOLING|NO_SSL/i.test(name))
+    .sort();
+
+  for (const name of candidates) {
+    const url = usable(name);
+    if (url) return { url, source: name };
+  }
+
+  // Last resort: an unpooled URL still beats no database at all.
+  for (const name of Object.keys(process.env).sort()) {
+    if (!/(^|_)(DATABASE|POSTGRES)_URL(_UNPOOLED|_NON_POOLING)?$/i.test(name)) continue;
+    const url = usable(name);
+    if (url) return { url, source: name };
+  }
+
+  return null;
+}
+
+const resolved = resolveDatabaseUrl();
+const connectionString = resolved?.url;
 
 /**
  * A configured deployment gets a plain Drizzle client with no indirection at
