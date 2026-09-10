@@ -65,7 +65,7 @@ export default async function BodyPage() {
               id="weight"
               name="weight"
               type="number"
-              step="0.1"
+              step="any"
               inputMode="decimal"
               className="input tabular-nums"
               defaultValue={
@@ -179,7 +179,7 @@ function Field({
         id={id}
         name={id}
         type="number"
-        step="0.1"
+        step="any"
         inputMode="decimal"
         className="input px-2 text-center tabular-nums"
         defaultValue={value ?? ""}

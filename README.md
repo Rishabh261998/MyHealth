@@ -61,6 +61,10 @@ push notifications).
 
 **Body & photos**
 - Weight, body fat, waist / chest / arm / thigh measurements.
+- **Pounds or kilograms** — pounds by default, chosen at sign-up and switchable
+  any time in Settings. Weights are stored in one canonical unit and converted
+  for display, so flipping the setting re-labels your whole history without
+  touching a single logged number.
 - Progress photos by pose (front / side / back), shrunk on your phone before
   upload and stored in your own database.
 - **AI check-in** (optional): Claude looks at one photo, or compares a before and

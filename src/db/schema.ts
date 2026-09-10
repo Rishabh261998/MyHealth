@@ -33,7 +33,7 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull().default(""),
   timezone: text("timezone").notNull().default("Asia/Kolkata"),
-  unit: text("unit").notNull().default("kg"), // kg | lb
+  unit: text("unit").notNull().default("lb"), // lb | kg
   // goals
   targetWeightKg: real("target_weight_kg"),
   dailyCalories: integer("daily_calories").default(2200),

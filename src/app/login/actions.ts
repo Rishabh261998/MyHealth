@@ -81,6 +81,7 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
 
   const name = String(formData.get("name") ?? "").trim();
   const timezone = String(formData.get("timezone") ?? "").trim() || "Asia/Kolkata";
+  const unit = String(formData.get("unit") ?? "") === "kg" ? "kg" : "lb";
 
   let userId: number;
   try {
@@ -98,6 +99,7 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
         passwordHash: await hashPassword(parsed.data.password),
         name,
         timezone,
+        unit,
       })
       .returning({ id: users.id });
 

@@ -56,8 +56,8 @@ export default async function SettingsPage() {
               Weight unit
             </label>
             <select id="unit" name="unit" className="input" defaultValue={user.unit}>
-              <option value="kg">Kilograms (kg)</option>
               <option value="lb">Pounds (lb)</option>
+              <option value="kg">Kilograms (kg)</option>
             </select>
           </div>
           <div>
@@ -87,7 +87,7 @@ export default async function SettingsPage() {
             id="targetWeight"
             name="targetWeight"
             type="number"
-            step="0.1"
+            step="any"
             inputMode="decimal"
             className="input tabular-nums"
             defaultValue={

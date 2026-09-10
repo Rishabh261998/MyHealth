@@ -495,7 +495,7 @@ function ExerciseBlock({
                 className="input h-9 px-2 py-0 text-center tabular-nums"
                 type="number"
                 inputMode="decimal"
-                step="0.5"
+                step="any"
                 value={
                   set.weightKg == null ? "" : String(round(kgToDisplay(set.weightKg, unit) ?? 0, 2))
                 }

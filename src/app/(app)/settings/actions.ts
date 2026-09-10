@@ -15,7 +15,7 @@ const int = (v: FormDataEntryValue | null, fallback: number) => {
 
 export async function updateProfile(formData: FormData) {
   const user = await requireUser();
-  const unit = z.enum(["kg", "lb"]).catch("kg").parse(String(formData.get("unit")));
+  const unit = z.enum(["lb", "kg"]).catch("lb").parse(String(formData.get("unit")));
 
   const rawTarget = String(formData.get("targetWeight") ?? "").trim();
   const targetWeightKg =
