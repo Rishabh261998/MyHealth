@@ -7,6 +7,8 @@ import {
   dayOverrides,
   exercises,
   friendships,
+  recoveryMetrics,
+  wearableConnections,
   meals,
   photos,
   routineDays,
@@ -501,4 +503,71 @@ export async function getFriends(userId: number) {
     .innerJoin(users, eq(users.id, friendships.friendId))
     .where(eq(friendships.userId, userId))
     .orderBy(asc(users.name));
+}
+
+
+/* ------------------------------------------------------ recovery / sleep */
+
+/**
+ * The best recovery figures per day over a window, collapsing multiple sources
+ * into one row (any non-null value wins; ties prefer the most recently updated
+ * source via the ORDER BY feeding the DISTINCT ON is not needed since we
+ * aggregate with max/coalesce over the small per-day set).
+ */
+export async function getRecoverySeries(userId: number, sinceDate: string) {
+  return db.execute<{
+    date: string;
+    sleep_hours: number | null;
+    sleep_score: number | null;
+    resting_hr: number | null;
+    hrv_ms: number | null;
+    readiness: number | null;
+    steps: number | null;
+    active_kcal: number | null;
+  }>(sql`
+    select date::text as date,
+           max(sleep_hours) as sleep_hours,
+           max(sleep_score) as sleep_score,
+           max(resting_hr) as resting_hr,
+           max(hrv_ms) as hrv_ms,
+           max(readiness) as readiness,
+           max(steps) as steps,
+           max(active_kcal) as active_kcal
+    from ${recoveryMetrics}
+    where user_id = ${userId} and date >= ${sinceDate}
+    group by date
+    order by date asc
+  `);
+}
+
+/** The single most recent day that has any recovery data. */
+export async function getLatestRecovery(userId: number) {
+  const [row] = await db.execute<{
+    date: string;
+    sleep_hours: number | null;
+    sleep_score: number | null;
+    resting_hr: number | null;
+    hrv_ms: number | null;
+    readiness: number | null;
+  }>(sql`
+    select date::text as date,
+           max(sleep_hours) as sleep_hours,
+           max(sleep_score) as sleep_score,
+           max(resting_hr) as resting_hr,
+           max(hrv_ms) as hrv_ms,
+           max(readiness) as readiness
+    from ${recoveryMetrics}
+    where user_id = ${userId}
+    group by date
+    order by date desc
+    limit 1
+  `);
+  return row ?? null;
+}
+
+export async function getWearableConnections(userId: number) {
+  return db
+    .select()
+    .from(wearableConnections)
+    .where(eq(wearableConnections.userId, userId));
 }

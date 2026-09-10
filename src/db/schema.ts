@@ -44,6 +44,8 @@ export const users = pgTable("users", {
   // if they opt in; friends are always mutual and explicit.
   shareCode: text("share_code").unique(),
   publicLeaderboard: boolean("public_leaderboard").notNull().default(false),
+  // Secret token for the wearable ingest webhook (Apple Watch via Shortcuts, etc.)
+  ingestToken: text("ingest_token").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -305,6 +307,60 @@ export const notes = pgTable(
   (t) => [index("notes_user_date_idx").on(t.userId, t.date)],
 );
 
+/* ----------------------------------------------------- recovery / wearables */
+
+/**
+ * One day of recovery data from one source. Keyed by (user, date, source) so
+ * an Oura reading and an Apple Watch reading for the same day coexist and the
+ * app can prefer whichever is present. Every field is nullable — sources report
+ * different subsets.
+ */
+export const recoveryMetrics = pgTable(
+  "recovery_metrics",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    source: text("source").notNull().default("manual"), // oura | whoop | apple | manual | ingest
+    sleepHours: real("sleep_hours"),
+    sleepScore: integer("sleep_score"), // 0-100
+    restingHr: integer("resting_hr"), // bpm
+    hrvMs: integer("hrv_ms"), // ms
+    readiness: integer("readiness"), // 0-100 (Oura readiness / Whoop recovery)
+    steps: integer("steps"),
+    activeKcal: integer("active_kcal"),
+    raw: jsonb("raw"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("recovery_user_date_source_idx").on(t.userId, t.date, t.source)],
+);
+
+/**
+ * A link to a third-party service the app pulls from (currently Oura). Stores
+ * the access token and the outcome of the last sync so failures are visible
+ * rather than silent.
+ */
+export const wearableConnections = pgTable(
+  "wearable_connections",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    source: text("source").notNull(), // oura | whoop
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    lastSyncStatus: text("last_sync_status"), // ok | error
+    lastSyncMessage: text("last_sync_message").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("wearable_conn_user_source_idx").on(t.userId, t.source)],
+);
+
 /* ---------------------------------------------------------- notifications */
 
 export const reminders = pgTable(
@@ -355,3 +411,5 @@ export type Photo = typeof photos.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type Note = typeof notes.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
+export type RecoveryMetric = typeof recoveryMetrics.$inferSelect;
+export type WearableConnection = typeof wearableConnections.$inferSelect;

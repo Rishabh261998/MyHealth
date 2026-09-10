@@ -7,6 +7,7 @@ import {
   Download,
   Dumbbell,
   LogOut,
+  Moon,
   Scale,
   Settings,
 } from "lucide-react";
@@ -19,6 +20,7 @@ const LINKS = [
   { href: "/body", label: "Body metrics", hint: "Weight, body fat, measurements", icon: Scale },
   { href: "/photos", label: "Progress photos", hint: "Timeline and AI check-ins", icon: Camera },
   { href: "/notes", label: "Journal", hint: "Sleep, energy, niggles", icon: BookOpen },
+  { href: "/recovery", label: "Recovery", hint: "Oura, Apple Watch, sleep & HRV", icon: Moon },
   { href: "/exercises", label: "Exercises", hint: "Your exercise library", icon: Dumbbell },
   { href: "/leaderboard", label: "Leaderboard", hint: "Friends and global rankings", icon: Trophy },
   { href: "/settings", label: "Settings", hint: "Goals, units, reminders", icon: Settings },

@@ -21,7 +21,7 @@ import {
   startOfWeekStr,
   todayInTz,
 } from "@/lib/dates";
-import { getDayNutrition, getPlannedSession, getWorkoutStreak } from "@/lib/queries";
+import { getDayNutrition, getLatestRecovery, getPlannedSession, getWorkoutStreak } from "@/lib/queries";
 import { fmtWeight, kgToDisplay, round } from "@/lib/units";
 import Stat from "@/components/Stat";
 import PushPrompt from "@/components/PushPrompt";
@@ -36,10 +36,11 @@ export default async function Dashboard() {
   const dow = dowInTz(user.timezone);
   const weekStart = startOfWeekStr(today);
 
-  const [routine, nutrition, streak] = await Promise.all([
+  const [routine, nutrition, streak, recovery] = await Promise.all([
     getPlannedSession(user.id, today),
     getDayNutrition(user.id, today),
     getWorkoutStreak(user.id, today),
+    getLatestRecovery(user.id),
   ]);
 
   const [todayWorkout] = await db
@@ -220,6 +221,37 @@ export default async function Dashboard() {
           tone={(sessionsWeek?.n ?? 0) >= 6 ? "good" : "default"}
         />
       </div>
+
+      {recovery && (recovery.sleep_hours != null || recovery.readiness != null) && (
+        <>
+          <h2 className="h-section mb-2 mt-5">Recovery</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Stat
+              label="Last sleep"
+              value={
+                recovery.sleep_hours != null
+                  ? `${Math.round(Number(recovery.sleep_hours) * 10) / 10}h`
+                  : "—"
+              }
+              sub={recovery.sleep_score != null ? `score ${recovery.sleep_score}` : "hours"}
+            />
+            <Stat
+              label="Readiness"
+              value={recovery.readiness != null ? String(recovery.readiness) : "—"}
+              sub={recovery.resting_hr != null ? `resting HR ${recovery.resting_hr}` : "today"}
+              tone={
+                recovery.readiness == null
+                  ? "default"
+                  : recovery.readiness >= 70
+                    ? "good"
+                    : recovery.readiness >= 50
+                      ? "warn"
+                      : "bad"
+              }
+            />
+          </div>
+        </>
+      )}
 
       <Link
         href="/progress"

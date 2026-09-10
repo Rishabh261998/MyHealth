@@ -71,6 +71,19 @@ push notifications).
   after pair, and tells you what visibly changed. It is deliberately cautious —
   it flags when a difference is probably just lighting or pose.
 
+**Recovery & wearables**
+- A **Recovery** screen with sleep, HRV, resting-HR and readiness trends, plus
+  a compact tile on the dashboard.
+- **Oura** connects directly with a personal access token (from
+  cloud.ouraring.com) and syncs the last 30 days of sleep and readiness.
+- **Apple Watch / Whoop** push in through a per-user webhook: point the free
+  Health Auto Export app or an Apple Shortcut at your ingest URL. Apple Health
+  has no cloud API, so this push model is the only real way — there is no
+  "sign in with Apple Watch".
+- **Manual** entry always works with no third party.
+- Every sync reports exactly what it fetched, so a misconfiguration is visible
+  rather than a silent no-op.
+
 **Reminders**
 - Web push to your phone: gym time (naming the day's exercises), morning
   weigh-in, water, meal logging, a Sunday weekly review.
