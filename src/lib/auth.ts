@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { randomBytes, scrypt as _scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users, type User } from "@/db/schema";
 
@@ -83,6 +83,25 @@ export async function requireUser(): Promise<User> {
   return user;
 }
 
-export function signupAllowed() {
-  return (process.env.ALLOW_SIGNUP ?? "true").toLowerCase() !== "false";
+/**
+ * Whether the sign-up form should be offered.
+ *
+ * ALLOW_SIGNUP=false closes registration — but the *first* account is always
+ * allowed regardless. Closing sign-ups before creating your own account would
+ * otherwise lock you out of your own deployment with no way back in.
+ */
+export async function signupAllowed(): Promise<boolean> {
+  const closed = (process.env.ALLOW_SIGNUP ?? "true").trim().toLowerCase() === "false";
+  if (!closed) return true;
+  return (await countUsers()) === 0;
+}
+
+/** Number of registered accounts; -1 when the database cannot be reached. */
+export async function countUsers(): Promise<number> {
+  try {
+    const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(users);
+    return row?.n ?? 0;
+  } catch {
+    return -1;
+  }
 }

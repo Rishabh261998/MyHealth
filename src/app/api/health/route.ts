@@ -78,7 +78,25 @@ export async function GET() {
       ];
       const missing = expected.filter((t) => !tables.includes(t));
 
-      database = { reachable: true, tableCount: tables.length, missingTables: missing };
+      let accounts: number | string = "unknown";
+      if (missing.length === 0) {
+        const [row] = await db.execute<{ n: number }>(
+          sql`select count(*)::int as n from users`,
+        );
+        accounts = row?.n ?? 0;
+        if (accounts === 0) {
+          problems.push(
+            'No account has been created yet. Open /login and use "Create your account" — the first account is always allowed, even with ALLOW_SIGNUP=false.',
+          );
+        }
+      }
+
+      database = {
+        reachable: true,
+        tableCount: tables.length,
+        missingTables: missing,
+        accounts,
+      };
 
       if (missing.length > 0) {
         problems.push(
@@ -103,6 +121,10 @@ export async function GET() {
           ? "configured"
           : "off — add the VAPID keys to enable reminders",
       aiPhotoAnalysis: isUsable("ANTHROPIC_API_KEY") ? "configured" : "off — optional",
+      signupsOpen:
+        (process.env.ALLOW_SIGNUP ?? "true").trim().toLowerCase() === "false"
+          ? "closed by ALLOW_SIGNUP — but the first account is still allowed"
+          : "open",
     },
     { status: 200 },
   );

@@ -4,5 +4,5 @@ import AuthForm from "./AuthForm";
 
 export default async function LoginPage() {
   if (await getCurrentUser()) redirect("/");
-  return <AuthForm canSignUp={signupAllowed()} />;
+  return <AuthForm canSignUp={await signupAllowed()} />;
 }
