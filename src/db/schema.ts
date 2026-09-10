@@ -40,8 +40,34 @@ export const users = pgTable("users", {
   dailyProteinG: integer("daily_protein_g").default(140),
   dailyWaterMl: integer("daily_water_ml").default(3000),
   weeklyJunkLimit: integer("weekly_junk_limit").default(3),
+  // Leaderboards — private by default. A user only appears on the public board
+  // if they opt in; friends are always mutual and explicit.
+  shareCode: text("share_code").unique(),
+  publicLeaderboard: boolean("public_leaderboard").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/* ------------------------------------------------------------- friendships */
+
+/**
+ * A mutual connection. Adding someone by their share code writes both
+ * directions, so friendship is always symmetric and always consented to by
+ * both people (you need their code; they keep yours).
+ */
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    friendId: integer("friend_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("friendships_pair_idx").on(t.userId, t.friendId)],
+);
 
 /* -------------------------------------------------------------- exercises */
 
@@ -328,3 +354,4 @@ export type Meal = typeof meals.$inferSelect;
 export type Photo = typeof photos.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type Note = typeof notes.$inferSelect;
+export type Friendship = typeof friendships.$inferSelect;

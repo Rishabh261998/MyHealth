@@ -6,12 +6,14 @@ import {
   bodyMetrics,
   dayOverrides,
   exercises,
+  friendships,
   meals,
   photos,
   routineDays,
   routineExercises,
   setLogs,
   waterLogs,
+  users,
   workouts,
   type RoutineDay,
 } from "@/db/schema";
@@ -395,4 +397,108 @@ export async function getWorkoutStreak(userId: number, today: string) {
     cursor = step(cursor, -1);
   }
   return streak;
+}
+
+
+/* ---------------------------------------------------------- leaderboards */
+
+export type LeaderboardEntry = {
+  userId: number;
+  name: string;
+  isMe: boolean;
+  sessionsWeek: number;
+  setsWeek: number;
+  volumeKgWeek: number;
+  streak: number;
+};
+
+/** The user ids you are connected to (mutual friends), plus yourself. */
+export async function getFriendIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ friendId: friendships.friendId })
+    .from(friendships)
+    .where(eq(friendships.userId, userId));
+  return [userId, ...rows.map((r) => r.friendId)];
+}
+
+/**
+ * Weekly stats for a set of users, ranked for a leaderboard. Ranking is by
+ * sessions trained this week, then volume — effort, not just how strong
+ * someone already is, so a beginner can top a friends board by showing up.
+ */
+export async function getLeaderboard(
+  userIds: number[],
+  currentUserId: number,
+  weekStart: string,
+): Promise<LeaderboardEntry[]> {
+  if (userIds.length === 0) return [];
+
+  const idList = sql.join(
+    userIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+
+  const stats = await db.execute<{
+    id: number;
+    name: string;
+    sessions_week: number;
+    sets_week: number;
+    volume_week: number;
+  }>(sql`
+    select u.id,
+           u.name,
+           (select count(*)::int from ${workouts} w
+              where w.user_id = u.id and w.date >= ${weekStart}) as sessions_week,
+           (select count(*)::int from ${setLogs} s
+              join ${workouts} w on w.id = s.workout_id
+              where w.user_id = u.id and w.date >= ${weekStart}
+                and s.done = true and s.is_warmup = false) as sets_week,
+           (select coalesce(sum(s.weight_kg * s.reps), 0) from ${setLogs} s
+              join ${workouts} w on w.id = s.workout_id
+              where w.user_id = u.id and w.date >= ${weekStart}
+                and s.done = true and s.is_warmup = false
+                and s.weight_kg is not null and s.reps is not null) as volume_week
+    from ${users} u
+    where u.id in (${idList})
+  `);
+
+  const weekEnd = addDaysStr(weekStart, 6);
+  const withStreak = await Promise.all(
+    stats.map(async (row) => ({
+      userId: row.id,
+      name: row.name || "Anonymous",
+      isMe: row.id === currentUserId,
+      sessionsWeek: Number(row.sessions_week),
+      setsWeek: Number(row.sets_week),
+      volumeKgWeek: Number(row.volume_week),
+      streak: await getWorkoutStreak(row.id, weekEnd),
+    })),
+  );
+
+  return withStreak.sort(
+    (a, b) =>
+      b.sessionsWeek - a.sessionsWeek ||
+      b.volumeKgWeek - a.volumeKgWeek ||
+      b.streak - a.streak ||
+      a.name.localeCompare(b.name),
+  );
+}
+
+/** Everyone who has opted into the public board (capped for a sane page). */
+export async function getPublicLeaderboardIds(limitUsers = 100): Promise<number[]> {
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.publicLeaderboard, true))
+    .limit(limitUsers);
+  return rows.map((r) => r.id);
+}
+
+export async function getFriends(userId: number) {
+  return db
+    .select({ id: users.id, name: users.name })
+    .from(friendships)
+    .innerJoin(users, eq(users.id, friendships.friendId))
+    .where(eq(friendships.userId, userId))
+    .orderBy(asc(users.name));
 }

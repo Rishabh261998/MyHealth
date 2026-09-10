@@ -78,6 +78,14 @@ push notifications).
   weigh-in reminder stays quiet if you already weighed in.
 - Fully editable — time, days of the week, message, which screen it opens.
 
+**Leaderboards** *(opt-in)*
+- A **friends** board: swap short codes with a friend, add each other, and see
+  who trained more this week — mutual and consented on both sides.
+- An optional **global** board across everyone on your instance who chooses to
+  appear. Off by default; only name and weekly training stats are ever shown.
+- Ranked by sessions trained this week, then volume, so showing up counts for
+  more than how strong you already are — everyone resets level on Monday.
+
 **Also**
 - Journal for sleep, energy and niggles.
 - Your own exercise library.

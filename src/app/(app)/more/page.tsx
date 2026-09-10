@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   BookOpen,
+  Trophy,
   CalendarDays,
   Camera,
   Download,
@@ -19,6 +20,7 @@ const LINKS = [
   { href: "/photos", label: "Progress photos", hint: "Timeline and AI check-ins", icon: Camera },
   { href: "/notes", label: "Journal", hint: "Sleep, energy, niggles", icon: BookOpen },
   { href: "/exercises", label: "Exercises", hint: "Your exercise library", icon: Dumbbell },
+  { href: "/leaderboard", label: "Leaderboard", hint: "Friends and global rankings", icon: Trophy },
   { href: "/settings", label: "Settings", hint: "Goals, units, reminders", icon: Settings },
 ];
 

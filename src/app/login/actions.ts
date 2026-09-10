@@ -14,6 +14,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { provisionNewUser } from "@/lib/provision";
+import { ensureShareCode } from "@/lib/sharecode";
 
 const credentials = z.object({
   email: z.string().email("That does not look like an email address."),
@@ -105,6 +106,7 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
 
     userId = created.id;
     await provisionNewUser(userId);
+    await ensureShareCode(userId);
   } catch (err) {
     return configError(err);
   }
