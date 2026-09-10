@@ -97,6 +97,27 @@ export const routineExercises = pgTable(
   (t) => [index("routine_exercises_day_idx").on(t.routineDayId)],
 );
 
+/**
+ * A one-off swap: "on this date, do that session instead of the one the weekly
+ * plan says". Miss Monday's push day and you can do it on Wednesday without
+ * rewriting the plan itself. Only ever applies to the single date named.
+ */
+export const dayOverrides = pgTable(
+  "day_overrides",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    routineDayId: integer("routine_day_id")
+      .notNull()
+      .references(() => routineDays.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("day_overrides_user_date_idx").on(t.userId, t.date)],
+);
+
 /* --------------------------------------------------------------- workouts */
 
 export const workouts = pgTable(
@@ -299,6 +320,7 @@ export type User = typeof users.$inferSelect;
 export type Exercise = typeof exercises.$inferSelect;
 export type RoutineDay = typeof routineDays.$inferSelect;
 export type RoutineExercise = typeof routineExercises.$inferSelect;
+export type DayOverride = typeof dayOverrides.$inferSelect;
 export type Workout = typeof workouts.$inferSelect;
 export type SetLog = typeof setLogs.$inferSelect;
 export type BodyMetric = typeof bodyMetrics.$inferSelect;

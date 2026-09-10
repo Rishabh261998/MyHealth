@@ -34,6 +34,11 @@ push notifications).
 **Training**
 - A weekly plan you can edit: Push / Pull / Legs / Push / Pull, a Saturday run,
   Sunday rest — 6–7 exercises per day, seeded for you on your first login.
+- **Missed a day? Swap it.** Skipped Monday's push day and want it on Wednesday?
+  Tap *Do a different session* and pick it — just for that date. The weekly plan
+  stays untouched, and the picker shows which sessions you have not done yet
+  this week. Swapping is blocked once you have logged sets, so nothing you did
+  can be lost.
 - A workout logger that opens already filled with today's exercises and sets.
 - **Shows what you lifted last time** on every exercise, so you always know the
   number to beat. Placeholders pre-fill from that session.

@@ -4,16 +4,20 @@ import PageHeader from "@/components/PageHeader";
 import Empty from "@/components/Empty";
 import { requireUser } from "@/lib/auth";
 import { DAY_NAMES, dowInTz, prettyDate, todayInTz } from "@/lib/dates";
-import { getRecentWorkouts, getRoutineForDay } from "@/lib/queries";
+import { getPlannedSession, getRecentWorkouts, getWeekCoverage } from "@/lib/queries";
 import { kgToDisplay, round } from "@/lib/units";
 import { startTodaysWorkout } from "./actions";
+import SessionSwapper from "./SessionSwapper";
 
 export default async function WorkoutIndex() {
   const user = await requireUser();
   const today = todayInTz(user.timezone);
   const dow = dowInTz(user.timezone);
-  const routine = await getRoutineForDay(user.id, dow);
-  const recent = await getRecentWorkouts(user.id, 15);
+  const [routine, recent, coverage] = await Promise.all([
+    getPlannedSession(user.id, today),
+    getRecentWorkouts(user.id, 15),
+    getWeekCoverage(user.id, today),
+  ]);
 
   const isRest = routine?.day.kind === "rest";
   const doneToday = recent.find((w) => w.date === today);
@@ -31,6 +35,13 @@ export default async function WorkoutIndex() {
       />
 
       <section className="card mb-5">
+        {routine?.swappedFrom && (
+          <p className="mb-3 rounded-xl border border-brand/40 bg-[var(--brand-soft)] px-3 py-2 text-xs">
+            Swapped for today — the plan says{" "}
+            <strong>{routine.swappedFrom.label}</strong>.
+          </p>
+        )}
+
         {isRest ? (
           <>
             <h2 className="text-lg font-semibold">Rest day</h2>
@@ -71,6 +82,13 @@ export default async function WorkoutIndex() {
             {doneToday ? "Continue today's session" : isRest ? "Log a workout anyway" : "Start workout"}
           </button>
         </form>
+
+        <SessionSwapper
+          date={today}
+          currentRoutineDayId={routine?.day.id ?? null}
+          options={coverage}
+          swappedFromLabel={routine?.swappedFrom?.label ?? null}
+        />
       </section>
 
       <h2 className="h-section mb-2">Recent sessions</h2>

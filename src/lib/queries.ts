@@ -1,8 +1,10 @@
 import "server-only";
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { addDaysStr, dowOfDateString, startOfWeekStr } from "./dates";
 import {
   bodyMetrics,
+  dayOverrides,
   exercises,
   meals,
   photos,
@@ -11,19 +13,12 @@ import {
   setLogs,
   waterLogs,
   workouts,
+  type RoutineDay,
 } from "@/db/schema";
 
-/** The planned session for a weekday, with its exercises in order. */
-export async function getRoutineForDay(userId: number, dayOfWeek: number) {
-  const [day] = await db
-    .select()
-    .from(routineDays)
-    .where(and(eq(routineDays.userId, userId), eq(routineDays.dayOfWeek, dayOfWeek)))
-    .limit(1);
-
-  if (!day) return null;
-
-  const items = await db
+/** The exercises belonging to one routine day, in order. */
+async function loadRoutineItems(routineDayId: number) {
+  return db
     .select({
       id: routineExercises.id,
       exerciseId: routineExercises.exerciseId,
@@ -38,10 +33,112 @@ export async function getRoutineForDay(userId: number, dayOfWeek: number) {
     })
     .from(routineExercises)
     .innerJoin(exercises, eq(exercises.id, routineExercises.exerciseId))
-    .where(eq(routineExercises.routineDayId, day.id))
+    .where(eq(routineExercises.routineDayId, routineDayId))
     .orderBy(asc(routineExercises.position), asc(routineExercises.id));
+}
 
-  return { day, items };
+/** The planned session for a weekday, with its exercises in order. */
+export async function getRoutineForDay(userId: number, dayOfWeek: number) {
+  const [day] = await db
+    .select()
+    .from(routineDays)
+    .where(and(eq(routineDays.userId, userId), eq(routineDays.dayOfWeek, dayOfWeek)))
+    .limit(1);
+
+  if (!day) return null;
+  return { day, items: await loadRoutineItems(day.id) };
+}
+
+export type PlannedSession = {
+  day: RoutineDay;
+  items: Awaited<ReturnType<typeof loadRoutineItems>>;
+  /** The session the weekly plan calls for, when it has been swapped away. */
+  swappedFrom: RoutineDay | null;
+};
+
+/**
+ * What to train on a given date: the weekly plan, unless a one-off swap says
+ * otherwise. Everything user-facing should go through this rather than reading
+ * the plan by weekday directly.
+ */
+export async function getPlannedSession(
+  userId: number,
+  date: string,
+): Promise<PlannedSession | null> {
+  const dayOfWeek = dowOfDateString(date);
+
+  const [planned] = await db
+    .select()
+    .from(routineDays)
+    .where(and(eq(routineDays.userId, userId), eq(routineDays.dayOfWeek, dayOfWeek)))
+    .limit(1);
+
+  const [override] = await db
+    .select({ routineDayId: dayOverrides.routineDayId })
+    .from(dayOverrides)
+    .where(and(eq(dayOverrides.userId, userId), eq(dayOverrides.date, date)))
+    .limit(1);
+
+  if (override) {
+    const [swapped] = await db
+      .select()
+      .from(routineDays)
+      .where(
+        and(eq(routineDays.id, override.routineDayId), eq(routineDays.userId, userId)),
+      )
+      .limit(1);
+
+    if (swapped) {
+      return {
+        day: swapped,
+        items: await loadRoutineItems(swapped.id),
+        swappedFrom: planned ?? null,
+      };
+    }
+  }
+
+  if (!planned) return null;
+  return { day: planned, items: await loadRoutineItems(planned.id), swappedFrom: null };
+}
+
+/**
+ * Every session in the weekly plan, flagged with whether it has already been
+ * trained during the week containing `date` — so a swap picker can lead with
+ * the ones that were missed.
+ */
+export async function getWeekCoverage(userId: number, date: string) {
+  const weekStart = startOfWeekStr(date);
+  const weekEnd = addDaysStr(weekStart, 6);
+
+  const days = await db
+    .select()
+    .from(routineDays)
+    .where(eq(routineDays.userId, userId))
+    .orderBy(asc(routineDays.dayOfWeek));
+
+  const done = await db
+    .select({ routineDayId: workouts.routineDayId, date: workouts.date })
+    .from(workouts)
+    .where(
+      and(
+        eq(workouts.userId, userId),
+        gte(workouts.date, weekStart),
+        lte(workouts.date, weekEnd),
+      ),
+    );
+
+  const doneIds = new Set(done.map((d) => d.routineDayId).filter(Boolean));
+
+  return days
+    .map((day) => ({
+      id: day.id,
+      label: day.label,
+      kind: day.kind,
+      dayOfWeek: day.dayOfWeek,
+      doneThisWeek: doneIds.has(day.id),
+    }))
+    // Monday first — that is how a training week reads.
+    .sort((a, b) => ((a.dayOfWeek + 6) % 7) - ((b.dayOfWeek + 6) % 7));
 }
 
 export async function getFullRoutine(userId: number) {

@@ -8,7 +8,7 @@ import {
   timeInTz,
   todayInTz,
 } from "@/lib/dates";
-import { getRoutineForDay } from "@/lib/queries";
+import { getPlannedSession } from "@/lib/queries";
 import { pushConfigured, sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       const delta = nowMin - minutesOfDay(reminder.timeLocal);
       if (delta < 0 || delta > WINDOW_MINUTES) continue;
 
-      const message = await buildMessage(user, reminder, today, dow);
+      const message = await buildMessage(user, reminder, today);
       if (!message) {
         // Nothing worth saying (e.g. the workout is already done) — mark it
         // handled so we don't reconsider it every run today.
@@ -109,12 +109,7 @@ type UserRow = typeof users.$inferSelect;
 type ReminderRow = typeof reminders.$inferSelect;
 
 /** Make each reminder say something specific rather than generic nagging. */
-async function buildMessage(
-  user: UserRow,
-  reminder: ReminderRow,
-  today: string,
-  dow: number,
-) {
+async function buildMessage(user: UserRow, reminder: ReminderRow, today: string) {
   const base = { title: reminder.title, body: reminder.body, url: reminder.url, tag: reminder.kind };
 
   if (reminder.kind === "gym") {
@@ -125,7 +120,7 @@ async function buildMessage(
       .limit(1);
     if (logged?.finished) return null; // already trained — stay quiet
 
-    const routine = await getRoutineForDay(user.id, dow);
+    const routine = await getPlannedSession(user.id, today);
     if (routine?.day.kind === "rest") return null;
     if (routine && routine.items.length > 0) {
       const names = routine.items.slice(0, 3).map((i) => i.name).join(", ");

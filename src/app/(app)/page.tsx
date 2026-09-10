@@ -21,7 +21,7 @@ import {
   startOfWeekStr,
   todayInTz,
 } from "@/lib/dates";
-import { getDayNutrition, getRoutineForDay, getWorkoutStreak } from "@/lib/queries";
+import { getDayNutrition, getPlannedSession, getWorkoutStreak } from "@/lib/queries";
 import { fmtWeight, kgToDisplay, round } from "@/lib/units";
 import Stat from "@/components/Stat";
 import PushPrompt from "@/components/PushPrompt";
@@ -37,7 +37,7 @@ export default async function Dashboard() {
   const weekStart = startOfWeekStr(today);
 
   const [routine, nutrition, streak] = await Promise.all([
-    getRoutineForDay(user.id, dow),
+    getPlannedSession(user.id, today),
     getDayNutrition(user.id, today),
     getWorkoutStreak(user.id, today),
   ]);
@@ -109,6 +109,11 @@ export default async function Dashboard() {
               </p>
             )}
             {isRest && <p className="mt-0.5 text-sm text-muted">Rest and recover.</p>}
+            {routine?.swappedFrom && (
+              <p className="mt-1 text-xs text-brand">
+                Swapped — plan says {routine.swappedFrom.label}
+              </p>
+            )}
           </div>
           <Dumbbell size={32} className="shrink-0 text-brand" />
         </div>

@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { setLogs, workouts } from "@/db/schema";
+import { dayOverrides, routineDays, setLogs, workouts } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { dowInTz, todayInTz } from "@/lib/dates";
-import { getRoutineForDay } from "@/lib/queries";
+import { todayInTz } from "@/lib/dates";
+import { getPlannedSession } from "@/lib/queries";
 
 /** Open today's session, creating it from the weekly plan on first use. */
 export async function startTodaysWorkout(dateOverride?: string) {
@@ -24,10 +24,7 @@ export async function startTodaysWorkout(dateOverride?: string) {
 
   if (existing) redirect(`/workout/${existing.id}`);
 
-  const dow = dateOverride
-    ? new Date(`${dateOverride}T00:00:00Z`).getUTCDay()
-    : dowInTz(user.timezone);
-  const routine = await getRoutineForDay(user.id, dow);
+  const routine = await getPlannedSession(user.id, date);
 
   const [created] = await db
     .insert(workouts)
@@ -41,20 +38,7 @@ export async function startTodaysWorkout(dateOverride?: string) {
     .returning({ id: workouts.id });
 
   // Pre-fill the empty set rows from the plan so the logger opens ready to use.
-  if (routine && routine.items.length > 0) {
-    const rows = routine.items.flatMap((item) =>
-      Array.from({ length: Math.max(1, item.targetSets) }, (_, i) => ({
-        workoutId: created.id,
-        exerciseId: item.exerciseId,
-        position: item.position,
-        setNumber: i + 1,
-        weightKg: null,
-        reps: null,
-        done: false,
-      })),
-    );
-    if (rows.length) await db.insert(setLogs).values(rows);
-  }
+  if (routine) await seedFromRoutine(created.id, routine.items);
 
   revalidatePath("/workout");
   redirect(`/workout/${created.id}`);
@@ -142,4 +126,151 @@ export async function deleteWorkout(workoutId: number) {
   revalidatePath("/workout");
   revalidatePath("/");
   redirect("/workout");
+}
+
+
+/* ------------------------------------------------------ swapping sessions */
+
+/**
+ * Seed a workout's set rows from a routine day. Used when a session is created
+ * and again when it is swapped before any real logging has happened.
+ */
+async function seedFromRoutine(workoutId: number, items: { exerciseId: number; position: number; targetSets: number }[]) {
+  await db.delete(setLogs).where(eq(setLogs.workoutId, workoutId));
+  if (items.length === 0) return;
+
+  await db.insert(setLogs).values(
+    items.flatMap((item) =>
+      Array.from({ length: Math.max(1, item.targetSets) }, (_, i) => ({
+        workoutId,
+        exerciseId: item.exerciseId,
+        position: item.position,
+        setNumber: i + 1,
+        weightKg: null,
+        reps: null,
+        done: false,
+      })),
+    ),
+  );
+}
+
+/** True once anything real has been entered — a weight, a rep, a ticked set. */
+async function hasLoggedWork(workoutId: number) {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(setLogs)
+    .where(
+      and(
+        eq(setLogs.workoutId, workoutId),
+        sql`(${setLogs.weightKg} is not null or ${setLogs.reps} is not null or ${setLogs.done} = true)`,
+      ),
+    );
+  return (row?.n ?? 0) > 0;
+}
+
+export type SwapResult =
+  | { ok: true; rebuilt: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Swap the session for a single date — "I missed Monday's push day, do it
+ * today". The weekly plan is untouched; only this date changes.
+ */
+export async function swapSession(date: string, routineDayId: number): Promise<SwapResult> {
+  const user = await requireUser();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { ok: false, error: "That is not a valid date." };
+  }
+
+  const [day] = await db
+    .select()
+    .from(routineDays)
+    .where(and(eq(routineDays.id, routineDayId), eq(routineDays.userId, user.id)))
+    .limit(1);
+  if (!day) return { ok: false, error: "That session is not in your plan." };
+
+  const blocked = await sessionAlreadyStarted(user.id, date);
+  if (blocked) return { ok: false, error: blocked };
+
+  await db
+    .insert(dayOverrides)
+    .values({ userId: user.id, date, routineDayId })
+    .onConflictDoUpdate({
+      target: [dayOverrides.userId, dayOverrides.date],
+      set: { routineDayId },
+    });
+
+  const rebuilt = await applySwapToExistingWorkout(user.id, date);
+
+  revalidatePath("/");
+  revalidatePath("/workout");
+  return { ok: true, rebuilt };
+}
+
+/** Drop the swap for a date and go back to whatever the weekly plan says. */
+export async function clearSwap(date: string): Promise<SwapResult> {
+  const user = await requireUser();
+
+  const blocked = await sessionAlreadyStarted(user.id, date);
+  if (blocked) return { ok: false, error: blocked };
+
+  await db
+    .delete(dayOverrides)
+    .where(and(eq(dayOverrides.userId, user.id), eq(dayOverrides.date, date)));
+
+  const rebuilt = await applySwapToExistingWorkout(user.id, date);
+
+  revalidatePath("/");
+  revalidatePath("/workout");
+  return { ok: true, rebuilt };
+}
+
+/**
+ * Swapping once real sets exist would leave the plan and the session
+ * disagreeing — the day would claim one workout while the logger showed
+ * another. Refuse instead, and say what to do about it.
+ */
+async function sessionAlreadyStarted(userId: number, date: string): Promise<string | null> {
+  const [workout] = await db
+    .select({ id: workouts.id, label: workouts.label })
+    .from(workouts)
+    .where(and(eq(workouts.userId, userId), eq(workouts.date, date)))
+    .limit(1);
+  if (!workout) return null;
+  if (!(await hasLoggedWork(workout.id))) return null;
+
+  return `You have already logged sets in today's ${workout.label} session. Finish it, or delete it from the session screen, and then swap.`;
+}
+
+/**
+ * If the day's session was already opened but nothing has been logged yet,
+ * rebuild it from the newly chosen routine day. A session with real sets in it
+ * is left alone — swapping must never delete work someone already did.
+ */
+async function applySwapToExistingWorkout(userId: number, date: string) {
+  const [workout] = await db
+    .select({ id: workouts.id })
+    .from(workouts)
+    .where(and(eq(workouts.userId, userId), eq(workouts.date, date)))
+    .limit(1);
+  if (!workout) return false;
+
+  if (await hasLoggedWork(workout.id)) return false;
+
+  const routine = await getPlannedSession(userId, date);
+  if (!routine) return false;
+
+  await db
+    .update(workouts)
+    .set({
+      label: routine.day.label,
+      kind: routine.day.kind === "rest" ? "strength" : routine.day.kind,
+      routineDayId: routine.day.id,
+    })
+    .where(eq(workouts.id, workout.id));
+
+  await seedFromRoutine(workout.id, routine.items);
+  revalidatePath(`/workout/${workout.id}`);
+  return true;
 }
