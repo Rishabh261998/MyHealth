@@ -42,29 +42,6 @@ export default function AuthForm({ canSignUp }: { canSignUp: boolean }) {
           </div>
         )}
 
-        {mode === "signup" && (
-          <div>
-            <span className="label">Weights in</span>
-            <div className="flex gap-1.5">
-              {(["lb", "kg"] as const).map((option) => (
-                <label
-                  key={option}
-                  className="flex-1 cursor-pointer rounded-xl border border-line bg-surface2 py-2.5 text-center text-sm font-medium has-[:checked]:border-brand has-[:checked]:bg-[var(--brand-soft)] has-[:checked]:text-brand"
-                >
-                  <input
-                    type="radio"
-                    name="unit"
-                    value={option}
-                    defaultChecked={option === "lb"}
-                    className="sr-only"
-                  />
-                  {option === "lb" ? "Pounds (lb)" : "Kilograms (kg)"}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div>
           <label className="label" htmlFor="email">
             Email

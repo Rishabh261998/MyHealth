@@ -50,17 +50,32 @@ export default async function SettingsPage() {
           <input id="name" name="name" className="input" defaultValue={user.name} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label" htmlFor="unit">
-              Weight unit
-            </label>
-            <select id="unit" name="unit" className="input" defaultValue={user.unit}>
-              <option value="lb">Pounds (lb)</option>
-              <option value="kg">Kilograms (kg)</option>
-            </select>
+        <div>
+          <span className="label">Weight unit</span>
+          <div className="flex gap-1.5">
+            {(["lb", "kg"] as const).map((option) => (
+              <label
+                key={option}
+                className="flex-1 cursor-pointer rounded-xl border border-line bg-surface2 py-2.5 text-center text-sm font-medium has-[:checked]:border-brand has-[:checked]:bg-[var(--brand-soft)] has-[:checked]:text-brand"
+              >
+                <input
+                  type="radio"
+                  name="unit"
+                  value={option}
+                  defaultChecked={user.unit === option}
+                  className="sr-only"
+                />
+                {option === "lb" ? "Pounds (lb)" : "Kilograms (kg)"}
+              </label>
+            ))}
           </div>
-          <div>
+          <p className="mt-1.5 text-xs text-muted">
+            Switching relabels everything you have logged — no numbers are changed.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
             <label className="label" htmlFor="timezone">
               Timezone
             </label>
