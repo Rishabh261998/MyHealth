@@ -37,3 +37,19 @@ export async function ensureShareCode(userId: number): Promise<string> {
 export function normalizeShareCode(input: string) {
   return input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
+
+
+/** The user's wearable ingest token, generated and stored on first use. */
+export async function ensureIngestToken(userId: number): Promise<string> {
+  const [existing] = await db
+    .select({ ingestToken: users.ingestToken })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (existing?.ingestToken) return existing.ingestToken;
+
+  const { randomBytes } = await import("crypto");
+  const token = randomBytes(24).toString("base64url");
+  await db.update(users).set({ ingestToken: token }).where(eq(users.id, userId));
+  return token;
+}

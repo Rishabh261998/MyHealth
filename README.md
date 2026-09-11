@@ -76,10 +76,12 @@ push notifications).
   a compact tile on the dashboard.
 - **Oura** connects directly with a personal access token (from
   cloud.ouraring.com) and syncs the last 30 days of sleep and readiness.
-- **Apple Watch / Whoop** push in through a per-user webhook: point the free
-  Health Auto Export app or an Apple Shortcut at your ingest URL. Apple Health
-  has no cloud API, so this push model is the only real way — there is no
-  "sign in with Apple Watch".
+- **Apple Watch** sets up in three steps: install Health Auto Export, scan the
+  QR on the Recovery screen (your ingest URL and token are baked in — nothing to
+  type), set it to run daily. After that it syncs on its own. Apple Health has
+  no cloud API, so this push model is the only real way — there is no "sign in
+  with Apple Watch" like Strava, and this is the closest a web app can get.
+- **Whoop** posts to the same webhook via any automation that reads its API.
 - **Manual** entry always works with no third party.
 - Every sync reports exactly what it fetched, so a misconfiguration is visible
   rather than a silent no-op.

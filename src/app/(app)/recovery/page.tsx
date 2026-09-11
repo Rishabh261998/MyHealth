@@ -1,12 +1,12 @@
-import { eq } from "drizzle-orm";
 import { Moon } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import Empty from "@/components/Empty";
 import Stat from "@/components/Stat";
 import TrendChart from "@/components/charts/TrendChart";
-import { db } from "@/db";
-import { users } from "@/db/schema";
+import QRCode from "qrcode";
+import { headers } from "next/headers";
 import { requireUser } from "@/lib/auth";
+import { ensureIngestToken } from "@/lib/sharecode";
 import { addDaysStr, shortDate, todayInTz } from "@/lib/dates";
 import {
   getLatestRecovery,
@@ -22,12 +22,29 @@ export default async function RecoveryPage() {
   const today = todayInTz(user.timezone);
   const since = addDaysStr(today, -30);
 
-  const [series, latest, connections, [profile]] = await Promise.all([
+  const [series, latest, connections, ingestToken] = await Promise.all([
     getRecoverySeries(user.id, since),
     getLatestRecovery(user.id),
     getWearableConnections(user.id),
-    db.select({ ingestToken: users.ingestToken }).from(users).where(eq(users.id, user.id)).limit(1),
+    ensureIngestToken(user.id),
   ]);
+
+  // Build the absolute webhook URL with the token embedded, so the phone needs
+  // one value, not two. Origin comes from the request so it is correct on any
+  // domain the app is served from.
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const origin = host ? `${proto}://${host}` : "";
+  const ingestUrl = `${origin}/api/ingest/wearable?token=${ingestToken}`;
+
+  // A QR of that URL so it can be handed to the phone by scanning, nothing typed.
+  const ingestQr = await QRCode.toString(ingestUrl, {
+    type: "svg",
+    margin: 1,
+    errorCorrectionLevel: "M",
+    color: { dark: "#0b0f14", light: "#ffffff" },
+  });
 
   const oura = connections.find((c) => c.source === "oura") ?? null;
 
@@ -125,7 +142,8 @@ export default async function RecoveryPage() {
 
       <RecoveryPanel
         today={today}
-        ingestToken={profile?.ingestToken ?? null}
+        ingestUrl={ingestUrl}
+        ingestQr={ingestQr}
         oura={
           oura
             ? {

@@ -17,11 +17,13 @@ type OuraState =
 
 export default function RecoveryPanel({
   today,
-  ingestToken,
+  ingestUrl,
+  ingestQr,
   oura,
 }: {
   today: string;
-  ingestToken: string | null;
+  ingestUrl: string;
+  ingestQr: string;
   oura: OuraState;
 }) {
   const [tab, setTab] = useState<"oura" | "apple" | "manual">(
@@ -54,7 +56,7 @@ export default function RecoveryPanel({
 
       <div className="mt-4">
         {tab === "oura" && <OuraTab oura={oura} />}
-        {tab === "apple" && <IngestTab ingestToken={ingestToken} />}
+        {tab === "apple" && <IngestTab ingestUrl={ingestUrl} ingestQr={ingestQr} />}
         {tab === "manual" && <ManualTab today={today} />}
       </div>
     </section>
@@ -155,19 +157,18 @@ function OuraTab({ oura }: { oura: OuraState }) {
   );
 }
 
-function IngestTab({ ingestToken }: { ingestToken: string | null }) {
-  const [token, setToken] = useState(ingestToken);
-  const [copied, setCopied] = useState<"url" | "token" | null>(null);
+function IngestTab({ ingestUrl, ingestQr }: { ingestUrl: string; ingestQr: string }) {
+  const [copied, setCopied] = useState(false);
+  const [rotated, setRotated] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const url = `${origin}/api/ingest/wearable`;
+  const url = rotated ?? ingestUrl;
 
-  const copy = async (text: string, which: "url" | "token") => {
+  const copy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      setCopied(which);
-      setTimeout(() => setCopied(null), 1500);
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch {
       /* shown on screen to copy manually */
     }
@@ -176,54 +177,59 @@ function IngestTab({ ingestToken }: { ingestToken: string | null }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted">
-        Apple Watch has no cloud API, so data is <strong>pushed</strong> to your app. Use the free{" "}
-        <span className="text-ink">Health Auto Export</span> app, or an Apple Shortcut, to POST a
-        daily JSON to this URL. Whoop can use the same webhook via any relay.
+        Apple Watch data can only be <strong>pushed</strong> out of the phone — Apple gives web
+        apps no way to pull it, so there is no one-tap sign-in like Strava. The nearest thing:
+        set this up once and it then syncs on its own every day.
       </p>
 
-      <div>
-        <span className="label">Webhook URL</span>
-        <button
-          type="button"
-          onClick={() => copy(url, "url")}
-          className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface2 px-3 py-2.5 text-left"
-        >
-          <span className="truncate font-mono text-xs">{url}</span>
-          {copied === "url" ? <Check size={14} /> : <Copy size={14} className="text-muted" />}
-        </button>
+      <ol className="space-y-2 text-sm">
+        <li className="flex gap-2">
+          <span className="font-bold text-brand">1.</span>
+          <span>
+            On your iPhone install the free{" "}
+            <span className="text-ink">Health Auto Export</span> app from the App Store.
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span className="font-bold text-brand">2.</span>
+          <span>
+            Scan this code (or copy the link below) and paste it as the app&apos;s{" "}
+            <span className="text-ink">REST API</span> destination — the token is already in it.
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span className="font-bold text-brand">3.</span>
+          <span>
+            Pick the metrics (sleep, resting HR, HRV, steps) and set it to run{" "}
+            <span className="text-ink">daily</span>. Done — it syncs automatically from then on.
+          </span>
+        </li>
+      </ol>
+
+      <div className="flex justify-center rounded-2xl border border-line bg-white p-4">
+        <div
+          className="h-44 w-44 [&>svg]:h-full [&>svg]:w-full"
+          aria-label="QR code containing your ingest URL"
+          dangerouslySetInnerHTML={{ __html: ingestQr }}
+        />
       </div>
 
-      <div>
-        <span className="label">Your ingest token</span>
-        {token ? (
-          <button
-            type="button"
-            onClick={() => copy(token, "token")}
-            className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface2 px-3 py-2.5 text-left"
-          >
-            <span className="truncate font-mono text-xs">{token}</span>
-            {copied === "token" ? <Check size={14} /> : <Copy size={14} className="text-muted" />}
-          </button>
-        ) : (
-          <p className="text-sm text-muted">No token yet — generate one below.</p>
-        )}
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => start(async () => setToken(await regenerateIngestToken()))}
-          className="btn-ghost mt-2 h-9 text-xs"
-        >
-          <RefreshCw size={13} /> {token ? "Regenerate token" : "Generate token"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={copy}
+        className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface2 px-3 py-2.5 text-left"
+      >
+        <span className="truncate font-mono text-xs">{url}</span>
+        {copied ? <Check size={14} /> : <Copy size={14} className="text-muted" />}
+      </button>
 
       <details className="rounded-xl border border-line bg-surface2 p-3 text-xs text-muted">
         <summary className="cursor-pointer font-medium text-ink">
-          What to send (tap for the format)
+          Prefer a script or Whoop? Show the raw format
         </summary>
         <p className="mt-2">
-          Send <code>POST</code> with header <code>Authorization: Bearer &lt;token&gt;</code> and a
-          JSON body — one day, or an array of days:
+          POST JSON to the URL above (token is in the query string, or send it as{" "}
+          <code>Authorization: Bearer &lt;token&gt;</code>). One day or an array:
         </p>
         <pre className="mt-2 overflow-x-auto rounded-lg bg-surface p-2 text-[11px] leading-relaxed text-ink">
 {`{
@@ -232,15 +238,33 @@ function IngestTab({ ingestToken }: { ingestToken: string | null }) {
   "restingHr": 55,
   "hrv": 62,
   "steps": 9000,
-  "activeKcal": 540,
   "readiness": 78
 }`}
         </pre>
-        <p className="mt-2">
-          Any field may be omitted. In Health Auto Export, set the REST API destination to the URL
-          above and add the Bearer header.
-        </p>
+        <p className="mt-2">Whoop can post here through any automation that reads its API.</p>
       </details>
+
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          if (
+            confirm(
+              "Generate a new link? The current one stops working and you must update the app with the new code.",
+            )
+          ) {
+            start(async () => {
+              const token = await regenerateIngestToken();
+              const u = new URL(ingestUrl);
+              u.searchParams.set("token", token);
+              setRotated(u.toString());
+            });
+          }
+        }}
+        className="text-xs text-muted underline"
+      >
+        Reset link
+      </button>
     </div>
   );
 }
