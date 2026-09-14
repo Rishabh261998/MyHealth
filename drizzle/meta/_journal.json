@@ -43,6 +43,13 @@
       "when": 1789083724950,
       "tag": "0005_thick_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789375746509,
+      "tag": "0006_handy_rogue",
+      "breakpoints": true
     }
   ]
 }

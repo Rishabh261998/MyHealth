@@ -307,6 +307,31 @@ export const notes = pgTable(
   (t) => [index("notes_user_date_idx").on(t.userId, t.date)],
 );
 
+/* --------------------------------------------------------------- api keys */
+
+/**
+ * A personal API key so third-party services and scripts can read and write
+ * this user's own data. Only a SHA-256 hash of the key is stored; the plaintext
+ * is shown once at creation. `scopes` is a comma list of "read" and/or "write".
+ */
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull().default("API key"),
+    prefix: text("prefix").notNull(), // shown for identification, e.g. mh_1a2b3c4d
+    keyHash: text("key_hash").notNull().unique(),
+    scopes: text("scopes").notNull().default("read"),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("api_keys_user_idx").on(t.userId)],
+);
+
 /* ----------------------------------------------------- recovery / wearables */
 
 /**
@@ -413,3 +438,4 @@ export type Note = typeof notes.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
 export type RecoveryMetric = typeof recoveryMetrics.$inferSelect;
 export type WearableConnection = typeof wearableConnections.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;

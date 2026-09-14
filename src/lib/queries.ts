@@ -326,11 +326,11 @@ export async function getWeeklyVolume(userId: number, weeks = 12) {
 export async function getDayNutrition(userId: number, date: string) {
   const [totals] = await db
     .select({
-      calories: sql<number>`coalesce(sum(${meals.calories}), 0)`,
-      protein: sql<number>`coalesce(sum(${meals.proteinG}), 0)`,
-      carbs: sql<number>`coalesce(sum(${meals.carbsG}), 0)`,
-      fat: sql<number>`coalesce(sum(${meals.fatG}), 0)`,
-      junk: sql<number>`coalesce(sum(case when ${meals.isJunk} then 1 else 0 end), 0)`,
+      calories: sql<number>`coalesce(sum(${meals.calories}), 0)::int`,
+      protein: sql<number>`coalesce(sum(${meals.proteinG}), 0)::int`,
+      carbs: sql<number>`coalesce(sum(${meals.carbsG}), 0)::int`,
+      fat: sql<number>`coalesce(sum(${meals.fatG}), 0)::int`,
+      junk: sql<number>`coalesce(sum(case when ${meals.isJunk} then 1 else 0 end), 0)::int`,
       count: sql<number>`count(*)::int`,
     })
     .from(meals)

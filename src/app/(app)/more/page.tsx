@@ -7,6 +7,7 @@ import {
   Download,
   Dumbbell,
   LogOut,
+  Code2,
   Moon,
   Scale,
   Settings,
@@ -24,6 +25,7 @@ const LINKS = [
   { href: "/exercises", label: "Exercises", hint: "Your exercise library", icon: Dumbbell },
   { href: "/leaderboard", label: "Leaderboard", hint: "Friends and global rankings", icon: Trophy },
   { href: "/settings", label: "Settings", hint: "Goals, units, reminders", icon: Settings },
+  { href: "/developer", label: "Developer / API", hint: "API keys for third-party access", icon: Code2 },
 ];
 
 export default async function MorePage() {

@@ -101,6 +101,14 @@ push notifications).
 - Ranked by sessions trained this week, then volume, so showing up counts for
   more than how strong you already are — everyone resets level on Monday.
 
+**Developer API** *(personal, key-based)*
+- A versioned REST API under `/api/v1` so third-party services (Zapier, scripts,
+  your own tools) can read and write your data with an API key.
+- Create named keys under More → Developer, each read-only or read + write; keys
+  are shown once, stored only as a hash, and revocable.
+- `GET /api/v1` returns a self-describing index of every endpoint. A key only
+  ever reaches its own owner's data.
+
 **Also**
 - Journal for sleep, energy and niggles.
 - Your own exercise library.
