@@ -8,7 +8,7 @@ import { db } from "@/db";
 import { dayOverrides, routineDays, setLogs, workouts } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { todayInTz } from "@/lib/dates";
-import { getPlannedSession } from "@/lib/queries";
+import { getLastPerformances, getPlannedSession } from "@/lib/queries";
 
 /** Open today's session, creating it from the weekly plan on first use. */
 export async function startTodaysWorkout(dateOverride?: string) {
@@ -38,7 +38,7 @@ export async function startTodaysWorkout(dateOverride?: string) {
     .returning({ id: workouts.id });
 
   // Pre-fill the empty set rows from the plan so the logger opens ready to use.
-  if (routine) await seedFromRoutine(created.id, routine.items);
+  if (routine) await seedFromRoutine(user.id, created.id, routine.items);
 
   revalidatePath("/workout");
   redirect(`/workout/${created.id}`);
@@ -96,6 +96,9 @@ export async function saveWorkout(input: SavePayload) {
 
   await db.delete(setLogs).where(eq(setLogs.workoutId, data.workoutId));
 
+  // Finishing a session confirms it: any set with reps entered counts as done,
+  // so pre-filled sets the lifter kept are included without tapping each check.
+  const finishing = data.finished === true;
   const rows = data.entries.flatMap((e) =>
     e.sets.map((s) => ({
       workoutId: data.workoutId,
@@ -106,7 +109,7 @@ export async function saveWorkout(input: SavePayload) {
       reps: s.reps,
       rpe: s.rpe,
       isWarmup: s.isWarmup,
-      done: s.done,
+      done: finishing && s.reps != null ? true : s.done,
     })),
   );
   if (rows.length) await db.insert(setLogs).values(rows);
@@ -135,22 +138,36 @@ export async function deleteWorkout(workoutId: number) {
  * Seed a workout's set rows from a routine day. Used when a session is created
  * and again when it is swapped before any real logging has happened.
  */
-async function seedFromRoutine(workoutId: number, items: { exerciseId: number; position: number; targetSets: number }[]) {
+async function seedFromRoutine(
+  userId: number,
+  workoutId: number,
+  items: { exerciseId: number; position: number; targetSets: number }[],
+) {
   await db.delete(setLogs).where(eq(setLogs.workoutId, workoutId));
   if (items.length === 0) return;
 
+  // Pre-fill each set with what was lifted last time so the logger opens ready
+  // to confirm rather than blank. The values are editable defaults; sets start
+  // not-done and are marked done when the workout is finished.
+  const last = await getLastPerformances(userId);
+
   await db.insert(setLogs).values(
-    items.flatMap((item) =>
-      Array.from({ length: Math.max(1, item.targetSets) }, (_, i) => ({
-        workoutId,
-        exerciseId: item.exerciseId,
-        position: item.position,
-        setNumber: i + 1,
-        weightKg: null,
-        reps: null,
-        done: false,
-      })),
-    ),
+    items.flatMap((item) => {
+      const prev = last.get(item.exerciseId);
+      const working = prev?.sets ?? []; // getLastPerformances already excludes warm-ups
+      return Array.from({ length: Math.max(1, item.targetSets) }, (_, i) => {
+        const ref = working[i] ?? working[working.length - 1];
+        return {
+          workoutId,
+          exerciseId: item.exerciseId,
+          position: item.position,
+          setNumber: i + 1,
+          weightKg: ref?.weightKg ?? null,
+          reps: ref?.reps ?? null,
+          done: false,
+        };
+      });
+    }),
   );
 }
 
@@ -270,7 +287,7 @@ async function applySwapToExistingWorkout(userId: number, date: string) {
     })
     .where(eq(workouts.id, workout.id));
 
-  await seedFromRoutine(workout.id, routine.items);
+  await seedFromRoutine(userId, workout.id, routine.items);
   revalidatePath(`/workout/${workout.id}`);
   return true;
 }

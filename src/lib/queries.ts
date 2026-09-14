@@ -346,6 +346,11 @@ export async function getDayNutrition(userId: number, date: string) {
 }
 
 export async function getRecentWorkouts(userId: number, limit = 10) {
+  // A LEFT JOIN + GROUP BY rather than correlated subqueries: Drizzle renders
+  // ${workouts.id} inside a subquery as a bare "id", which then binds to the
+  // inner set_logs row instead of the outer workout and always counts zero.
+  // "sets" counts any set actually recorded (done, or with reps entered), not
+  // only ones where the done tick was tapped.
   return db
     .select({
       id: workouts.id,
@@ -355,11 +360,13 @@ export async function getRecentWorkouts(userId: number, limit = 10) {
       finished: workouts.finished,
       durationMin: workouts.durationMin,
       distanceKm: workouts.distanceKm,
-      sets: sql<number>`(select count(*)::int from ${setLogs} s where s.workout_id = ${workouts.id} and s.done = true)`,
-      volume: sql<number>`(select coalesce(sum(s.weight_kg * s.reps), 0) from ${setLogs} s where s.workout_id = ${workouts.id} and s.done = true and s.is_warmup = false)`,
+      sets: sql<number>`count(${setLogs.id}) filter (where ${setLogs.done} = true or ${setLogs.reps} is not null)::int`,
+      volume: sql<number>`coalesce(sum(${setLogs.weightKg} * ${setLogs.reps}) filter (where ${setLogs.done} = true and ${setLogs.isWarmup} = false), 0)`,
     })
     .from(workouts)
+    .leftJoin(setLogs, eq(setLogs.workoutId, workouts.id))
     .where(eq(workouts.userId, userId))
+    .groupBy(workouts.id)
     .orderBy(desc(workouts.date), desc(workouts.id))
     .limit(limit);
 }
