@@ -5,4 +5,4 @@ export function aiConfigured() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
-export const AI_MODEL = "claude-sonnet-5";
+export const AI_MODEL = "claude-sonnet-5-5";

@@ -138,7 +138,12 @@ export async function analyzePhotos(photoId: number, comparePhotoId?: number) {
   try {
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 700,
+      // Adaptive thinking is on by default on this model and its tokens count
+      // against max_tokens, so give the ~200-word answer ample headroom; low
+      // effort keeps a lightweight observational task cheap and fast.
+      max_tokens: 2000,
+      thinking: { type: "adaptive" },
+      output_config: { effort: "low" },
       system:
         "You are a supportive, straight-talking strength coach reviewing a client's progress photos. You are observing pixels, not examining a person: hedge appropriately, never give medical advice, and never comment on attractiveness. Be specific and encouraging without exaggerating small changes.",
       messages: [{ role: "user", content }],
@@ -149,6 +154,18 @@ export async function analyzePhotos(photoId: number, comparePhotoId?: number) {
       .map((block) => block.text)
       .join("\n")
       .trim();
+
+    // A truncated or thinking-only response leaves no coaching text — surface
+    // that rather than saving a blank analysis as if it succeeded.
+    if (!summary) {
+      return {
+        ok: false as const,
+        error:
+          response.stop_reason === "max_tokens"
+            ? "The analysis ran long and got cut off. Please try again."
+            : "The analysis came back empty. Please try again.",
+      };
+    }
 
     await db.insert(photoAnalyses).values({
       userId: user.id,
