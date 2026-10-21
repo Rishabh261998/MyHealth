@@ -5,12 +5,14 @@
 # Settings -> Secrets and variables -> Actions:
 #   APP_URL      e.g. https://myhealth-yourname.vercel.app
 #   CRON_SECRET  the same value as the CRON_SECRET env var on your deployment
+#
+# The 15-minute schedule is switched off; run it by hand from the Actions tab.
+# To turn it back on, add this under `on:`:
+#   schedule:
+#     - cron: "*/15 * * * *"
 name: Send reminders
 
 on:
-  schedule:
-    # Every 15 minutes. GitHub queues cron jobs, so expect a few minutes of drift.
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
