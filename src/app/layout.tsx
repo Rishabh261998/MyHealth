@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "@frankieai/react/styles.css";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import FrankieProvider from "./frankie-provider";
 
 export const metadata: Metadata = {
   title: "MyHealth",
@@ -28,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh font-sans antialiased">
         {children}
         <ServiceWorkerRegistrar />
+        <FrankieProvider />
       </body>
     </html>
   );
