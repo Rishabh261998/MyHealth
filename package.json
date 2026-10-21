@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
+    "@frankieai/react": "^0.2.40",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.12",
