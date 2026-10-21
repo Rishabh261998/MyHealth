@@ -3,7 +3,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { bodyMetrics, meals, recoveryMetrics, waterLogs, workouts } from "@/db/schema";
-import { authenticateApiKey, hasScope, type ApiAuth } from "@/lib/apikey";
+import { authenticateRequest, hasScope, type ApiAuth } from "@/lib/apikey";
 import { addDaysStr, todayInTz } from "@/lib/dates";
 import {
   getDayNutrition,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/queries";
 import { normalizeIngest } from "@/lib/recovery";
 import { KG_PER_LB } from "@/lib/units";
+import { openApiSpec } from "@/lib/openapi";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,11 @@ const err = (status: number, message: string) => json({ error: message }, status
 const INDEX = {
   name: "MyHealth API",
   version: "v1",
-  auth: "Send your key as `Authorization: Bearer <key>` or `X-API-Key: <key>`.",
+  auth: "Send your key as `Authorization: Bearer <key>` or `X-API-Key: <key>`. In the app itself, the signed-in session works too.",
+  openapi: "/api/v1/openapi.json",
   endpoints: [
     { method: "GET", path: "/api/v1", scope: null, desc: "This index." },
+    { method: "GET", path: "/api/v1/openapi.json", scope: null, desc: "OpenAPI 3.1 description of this API." },
     { method: "GET", path: "/api/v1/me", scope: "read", desc: "Profile and goals." },
     { method: "GET", path: "/api/v1/summary", scope: "read", desc: "Today's snapshot: nutrition, water, weight, planned session, streak." },
     { method: "GET", path: "/api/v1/workouts?limit=", scope: "read", desc: "Recent workouts." },
@@ -50,9 +53,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ path?: stri
   const route = path.join("/");
 
   if (route === "") return json(INDEX);
+  if (route === "openapi.json") return json(openApiSpec(new URL(request.url).origin));
 
-  const auth = await authenticateApiKey(request);
-  if (!auth) return err(401, "Invalid or missing API key.");
+  const auth = await authenticateRequest(request);
+  if (!auth) return err(401, "Not signed in, and no valid API key was sent.");
   if (!hasScope(auth, "read")) return err(403, "This key lacks the 'read' scope.");
 
   const url = new URL(request.url);
@@ -142,8 +146,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ path?: str
   const { path = [] } = await ctx.params;
   const route = path.join("/");
 
-  const auth = await authenticateApiKey(request);
-  if (!auth) return err(401, "Invalid or missing API key.");
+  const auth = await authenticateRequest(request);
+  if (!auth) return err(401, "Not signed in, and no valid API key was sent.");
   if (!hasScope(auth, "write")) return err(403, "This key lacks the 'write' scope.");
 
   let body: unknown;

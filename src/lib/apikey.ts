@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, users, type User } from "@/db/schema";
+import { getCurrentUser } from "./auth";
 
 export type Scope = "read" | "write";
 
@@ -32,7 +33,7 @@ function extractKey(request: Request): string | null {
   return x?.trim() || null;
 }
 
-export type ApiAuth = { user: User; scopes: Scope[]; keyId: number };
+export type ApiAuth = { user: User; scopes: Scope[]; keyId: number | null };
 
 /**
  * Authenticate a request by API key. Returns the owning user and the key's
@@ -57,6 +58,19 @@ export async function authenticateApiKey(request: Request): Promise<ApiAuth | nu
 
   const scopes = row.scopes.split(",").map((s) => s.trim()).filter(Boolean) as Scope[];
   return { user, scopes, keyId: row.id };
+}
+
+/**
+ * Authenticate an API request: by API key when one is sent, otherwise by the
+ * signed-in session cookie, so in-app tools running in the user's own browser
+ * (such as the Frankie assistant) can call the API as that user. A session
+ * gets both scopes, the same access the user has in the app. The cookie is
+ * SameSite=Lax, so other sites can't make credentialed calls with it.
+ */
+export async function authenticateRequest(request: Request): Promise<ApiAuth | null> {
+  if (extractKey(request)) return authenticateApiKey(request);
+  const user = await getCurrentUser();
+  return user ? { user, scopes: ["read", "write"], keyId: null } : null;
 }
 
 export function hasScope(auth: ApiAuth, scope: Scope) {
