@@ -71,15 +71,6 @@ push notifications).
   after pair, and tells you what visibly changed. It is deliberately cautious —
   it flags when a difference is probably just lighting or pose.
 
-**AI coach** (optional)
-- A chat screen (**More → AI Coach**, or the link on the dashboard) where you
-  can ask about your training, diet and recovery. Each question is answered
-  with your own data in view: today's planned session, recent workouts, PRs,
-  weight trend, today's food and water, junk meals this week, recovery and
-  recent journal entries.
-- Answers stream in as they are written, and conversations are saved so you
-  can pick up where you left off. Tap **New chat** to start fresh.
-
 **Recovery & wearables**
 - A **Recovery** screen with sleep, HRV, resting-HR and readiness trends, plus
   a compact tile on the dashboard.
@@ -135,9 +126,9 @@ push notifications).
 | Database | [Neon](https://neon.tech) Free | 0.5 GB Postgres | No |
 | Push notifications | Web Push (VAPID) | Free, it is a browser standard | — |
 | Reminder scheduler | GitHub Actions | 2,000 min/month (unlimited on public repos) | No |
-| AI photo analysis and AI coach | [Anthropic API](https://console.anthropic.com) | **Optional, pay-as-you-go** — roughly a cent per photo; a few cents per coach message | Yes, if you want these |
+| AI photo analysis | [Anthropic API](https://console.anthropic.com) | **Optional, pay-as-you-go** — roughly a cent per photo | Yes, if you want this |
 
-Everything except the AI photo check-in and the AI coach is free forever at personal scale. Skip
+Everything except the AI photo check-in is free forever at personal scale. Skip
 the API key and every other feature still works.
 
 > Vercel Hobby has its own cron, but on the free plan it only fires **once a
@@ -172,7 +163,7 @@ Everything else is optional:
 | `AUTH_SECRET` | Never, unless you want to pin it. Left unset, the app generates a random session secret on first run and keeps it in the database. |
 | `CRON_SECRET` | Only to enable scheduled reminders (step 5). |
 | `ALLOW_SIGNUP` | Only to close registration, once your account exists. The first account is always allowed regardless, so you cannot lock yourself out. |
-| `ANTHROPIC_API_KEY` | Only for AI progress-photo analysis and the AI coach. |
+| `ANTHROPIC_API_KEY` | Only for AI progress-photo analysis. |
 
 Vercel gives you a public `https://<project>.vercel.app` URL — that is the link
 to open on your phone, and the one to paste at the top of this README.
@@ -215,11 +206,11 @@ redeploy so nobody else can register on your instance.
   **required** before notifications will work at all (Apple only allows web push
   from an installed PWA, iOS 16.4+).
 
-**8. Optional — the AI photo check-in and AI coach**
+**8. Optional — the AI photo check-in**
 
 Get a key at [console.anthropic.com](https://console.anthropic.com) and add
 `ANTHROPIC_API_KEY` in Vercel. Without it, everything else works and the photo
-and coach screens just say the feature is off.
+screen just says the feature is off.
 
 ---
 
@@ -254,19 +245,17 @@ Handy scripts:
 - **Recharts** for the graphs
 - **web-push** (VAPID) + a service worker for notifications and an offline shell
 - Session cookies signed with `jose`; passwords hashed with scrypt
-- **Anthropic API** (`@anthropic-ai/sdk`) for the photo check-in and the
-  streaming AI coach
 
 ```
 src/
   app/
     (app)/            the signed-in app — dashboard, workout, nutrition,
-                      body, photos, progress, plan, notes, coach, settings
-    api/              push subscribe/test, reminder cron, data export, coach chat
+                      body, photos, progress, plan, notes, settings
+    api/              push subscribe/test, reminder cron, data export
     login/            sign in / sign up
   components/         shared UI, including the chart kit
   db/                 Drizzle schema and client
-  lib/                auth, dates, units, queries, push, default plan, coach context
+  lib/                auth, dates, units, queries, push, default plan
 ```
 
 ---
@@ -277,15 +266,6 @@ It reads a photo and describes what changed in training terms. It is not a
 medical assessment and not a body-fat measurement — the prompt tells it to hedge
 when a difference could just be lighting, angle or pump, and to avoid both. For
 anything health-related, talk to a doctor.
-
-## A note on the AI coach
-
-It sees a summary of your logged data (never your photos, email or password)
-and gives training and nutrition suggestions. It is told not to diagnose, to
-send you to a professional for pain, chest pain or dizziness, and not to push
-extreme dieting. Each account can send up to 100 coach messages a day and 40
-per conversation, which keeps API costs predictable. If the model declines a
-question, the API automatically retries it on a fallback model before giving up.
 
 ## Your data
 

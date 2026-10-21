@@ -423,30 +423,6 @@ export const pushSubscriptions = pgTable(
   (t) => [uniqueIndex("push_subs_endpoint_idx").on(t.endpoint)],
 );
 
-/* ------------------------------------------------------------- AI coach */
-
-/**
- * One message in an AI-coach conversation. Stored append-only and replayed to
- * the model verbatim: `content` holds exactly what was sent (user text, the
- * health snapshot as a system message) or received (the assistant's full
- * content blocks, thinking included). Rewriting or dropping earlier rows would
- * invalidate the model's preserved thinking, so rows are never edited.
- */
-export const chatMessages = pgTable(
-  "chat_messages",
-  {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    conversationId: text("conversation_id").notNull(),
-    role: text("role").notNull(), // user | assistant | system
-    content: jsonb("content").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [index("chat_messages_user_conv_idx").on(t.userId, t.conversationId, t.id)],
-);
-
 export type User = typeof users.$inferSelect;
 export type Exercise = typeof exercises.$inferSelect;
 export type RoutineDay = typeof routineDays.$inferSelect;
@@ -463,4 +439,3 @@ export type Friendship = typeof friendships.$inferSelect;
 export type RecoveryMetric = typeof recoveryMetrics.$inferSelect;
 export type WearableConnection = typeof wearableConnections.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
-export type ChatMessage = typeof chatMessages.$inferSelect;
