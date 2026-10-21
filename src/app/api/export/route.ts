@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   bodyMetrics,
+  chatMessages,
   exercises,
   meals,
   notes,
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
     noteRows,
     reminderRows,
     photoRows,
+    chatRows,
   ] = await Promise.all([
     db.select().from(exercises).where(eq(exercises.userId, user.id)),
     db.select().from(routineDays).where(eq(routineDays.userId, user.id)),
@@ -75,6 +77,11 @@ export async function GET(request: Request) {
     db.select().from(notes).where(eq(notes.userId, user.id)),
     db.select().from(reminders).where(eq(reminders.userId, user.id)),
     db.select().from(photos).where(eq(photos.userId, user.id)),
+    db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.userId, user.id))
+      .orderBy(asc(chatMessages.id)),
   ]);
 
   const payload = {
@@ -104,6 +111,24 @@ export async function GET(request: Request) {
     photos: photoRows.map((p) =>
       includePhotos ? p : { ...p, dataUrl: "[omitted — add ?photos=1 to include]" },
     ),
+    // The coach conversations as you saw them: your messages and the coach's
+    // replies (the data snapshots and the model's internal blocks are left out).
+    coachMessages: chatRows
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        conversationId: m.conversationId,
+        role: m.role,
+        text:
+          typeof m.content === "string"
+            ? m.content
+            : Array.isArray(m.content)
+              ? m.content
+                  .filter((b) => b?.type === "text")
+                  .map((b) => b.text)
+                  .join("")
+              : "",
+        createdAt: m.createdAt,
+      })),
   };
 
   return new NextResponse(JSON.stringify(payload, null, 2), {

@@ -8,6 +8,7 @@ import {
   Flame,
   Plus,
   Scale,
+  Sparkles,
   UtensilsCrossed,
 } from "lucide-react";
 import { db } from "@/db";
@@ -258,6 +259,16 @@ export default async function Dashboard() {
         className="mt-5 flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3.5"
       >
         <span className="font-medium">See your progress charts</span>
+        <ArrowRight size={18} className="text-muted" />
+      </Link>
+
+      <Link
+        href="/coach"
+        className="mt-3 flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3.5"
+      >
+        <span className="flex items-center gap-2.5 font-medium">
+          <Sparkles size={18} className="text-brand" /> Ask your AI coach
+        </span>
         <ArrowRight size={18} className="text-muted" />
       </Link>
     </>
