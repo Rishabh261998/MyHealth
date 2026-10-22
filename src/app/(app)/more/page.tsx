@@ -7,6 +7,7 @@ import {
   Download,
   Dumbbell,
   LogOut,
+  MessageCircle,
   Code2,
   Moon,
   Scale,
@@ -17,6 +18,7 @@ import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 
 const LINKS = [
+  { href: "/chat", label: "Chat", hint: "Ask the assistant about your data", icon: MessageCircle },
   { href: "/plan", label: "Weekly plan", hint: "Your split, day by day", icon: CalendarDays },
   { href: "/body", label: "Body metrics", hint: "Weight, body fat, measurements", icon: Scale },
   { href: "/photos", label: "Progress photos", hint: "Timeline and AI check-ins", icon: Camera },
