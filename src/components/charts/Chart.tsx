@@ -122,3 +122,10 @@ export const AXIS = {
   axisLine: false,
   tick: { fill: "var(--axis-ink)", fontSize: 11 },
 } as const;
+
+const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumSignificantDigits: 3 });
+
+/** Y-axis tick labels short enough for the narrow axis: 10K, 7.5K, 7.23. */
+export function formatTick(value: number | string) {
+  return typeof value === "number" ? compact.format(value) : value;
+}

@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import Chart, { AXIS, ChartTooltip } from "./Chart";
+import Chart, { AXIS, ChartTooltip, formatTick } from "./Chart";
 
 export default function BarsChart({
   title,
@@ -19,6 +19,7 @@ export default function BarsChart({
   label,
   suffix = "",
   height = 200,
+  xLabel = "Week",
 }: {
   title: string;
   subtitle?: string;
@@ -27,13 +28,15 @@ export default function BarsChart({
   label: string;
   suffix?: string;
   height?: number;
+  /** Header for the first column of the table view. */
+  xLabel?: string;
 }) {
   return (
     <Chart
       title={title}
       subtitle={subtitle}
       table={{
-        columns: ["Week", label],
+        columns: [xLabel, label],
         rows: data.map((d) => [d.label, Math.round(Number(d[dataKey] ?? 0))]),
       }}
     >
@@ -41,7 +44,7 @@ export default function BarsChart({
         <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           <XAxis dataKey="label" {...AXIS} minTickGap={16} />
-          <YAxis {...AXIS} width={46} />
+          <YAxis {...AXIS} width={46} tickFormatter={formatTick} />
           <Tooltip content={<ChartTooltip suffix={suffix} />} cursor={{ fill: "var(--surface-2)" }} />
           <Bar
             dataKey={dataKey}

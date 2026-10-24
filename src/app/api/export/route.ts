@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   bodyMetrics,
+  customMetrics,
   exercises,
   meals,
   notes,
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
     noteRows,
     reminderRows,
     photoRows,
+    customMetricRows,
   ] = await Promise.all([
     db.select().from(exercises).where(eq(exercises.userId, user.id)),
     db.select().from(routineDays).where(eq(routineDays.userId, user.id)),
@@ -75,6 +77,7 @@ export async function GET(request: Request) {
     db.select().from(notes).where(eq(notes.userId, user.id)),
     db.select().from(reminders).where(eq(reminders.userId, user.id)),
     db.select().from(photos).where(eq(photos.userId, user.id)),
+    db.select().from(customMetrics).where(eq(customMetrics.userId, user.id)),
   ]);
 
   const payload = {
@@ -100,6 +103,7 @@ export async function GET(request: Request) {
     waterLogs: waterRows,
     notes: noteRows,
     reminders: reminderRows,
+    customMetrics: customMetricRows,
     // Image bytes are huge; include them only when explicitly asked for.
     photos: photoRows.map((p) =>
       includePhotos ? p : { ...p, dataUrl: "[omitted — add ?photos=1 to include]" },

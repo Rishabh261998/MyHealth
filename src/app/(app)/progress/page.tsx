@@ -238,8 +238,16 @@ export default async function ProgressPage({
       )}
 
       <Link
-        href="/photos"
+        href="/metrics"
         className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3.5"
+      >
+        <span className="font-medium">Build your own metrics</span>
+        <span className="text-muted">→</span>
+      </Link>
+
+      <Link
+        href="/photos"
+        className="mt-3 flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3.5"
       >
         <span className="font-medium">Compare progress photos</span>
         <span className="text-muted">→</span>
