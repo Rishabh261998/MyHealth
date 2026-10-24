@@ -423,6 +423,32 @@ export const pushSubscriptions = pgTable(
   (t) => [uniqueIndex("push_subs_endpoint_idx").on(t.endpoint)],
 );
 
+/* ---------------------------------------------------------- custom metrics */
+
+/**
+ * A chart the user built on the Metrics screen: one data source (see
+ * src/lib/metrics.ts for the list), grouped by day or week, combined by
+ * average / total / best, over a time range. Only the definition is stored;
+ * the numbers are always computed fresh from the logged data.
+ */
+export const customMetrics = pgTable(
+  "custom_metrics",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    source: text("source").notNull(), // a key of METRIC_SOURCES
+    exerciseId: integer("exercise_id").references(() => exercises.id, { onDelete: "cascade" }),
+    period: text("period").notNull().default("week"), // day | week
+    calc: text("calc").notNull().default("avg"), // avg | sum | max
+    rangeDays: integer("range_days").notNull().default(90), // 0 = all time
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("custom_metrics_user_idx").on(t.userId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Exercise = typeof exercises.$inferSelect;
 export type RoutineDay = typeof routineDays.$inferSelect;
@@ -439,3 +465,4 @@ export type Friendship = typeof friendships.$inferSelect;
 export type RecoveryMetric = typeof recoveryMetrics.$inferSelect;
 export type WearableConnection = typeof wearableConnections.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
+export type CustomMetric = typeof customMetrics.$inferSelect;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  BarChart3,
   BookOpen,
   Trophy,
   CalendarDays,
@@ -20,6 +21,7 @@ import { logout } from "@/app/login/actions";
 const LINKS = [
   { href: "/chat", label: "Chat", hint: "Ask the assistant about your data", icon: MessageCircle },
   { href: "/plan", label: "Weekly plan", hint: "Your split, day by day", icon: CalendarDays },
+  { href: "/metrics", label: "Metrics", hint: "Build your own charts over time", icon: BarChart3 },
   { href: "/body", label: "Body metrics", hint: "Weight, body fat, measurements", icon: Scale },
   { href: "/photos", label: "Progress photos", hint: "Timeline and AI check-ins", icon: Camera },
   { href: "/notes", label: "Journal", hint: "Sleep, energy, niggles", icon: BookOpen },

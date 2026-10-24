@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import Chart, { AXIS, ChartTooltip } from "./Chart";
+import Chart, { AXIS, ChartTooltip, formatTick } from "./Chart";
 
 export type TrendSeries = { key: string; label: string; color: string };
 
@@ -52,7 +52,7 @@ export default function TrendChart({
         <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           <XAxis dataKey={xKey} {...AXIS} minTickGap={24} />
-          <YAxis {...AXIS} width={46} domain={["auto", "auto"]} />
+          <YAxis {...AXIS} width={46} tickFormatter={formatTick} domain={["auto", "auto"]} />
           <Tooltip
             content={<ChartTooltip suffix={suffix} />}
             cursor={{ stroke: "var(--grid)", strokeWidth: 2 }}
